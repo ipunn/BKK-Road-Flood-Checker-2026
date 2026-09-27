@@ -208,11 +208,12 @@ h1, h2 { margin: 0; }
   color: var(--paper);
 }
 
-.report-photo-link { display: inline-block; margin-top: 4px; }
+.report-photo-link { display: block; margin-top: 6px; }
 .report-photo-thumb {
   display: block;
-  max-width: 120px;
-  max-height: 90px;
+  width: 100%;
+  max-width: 280px;
+  max-height: 220px;
   border: 1px solid var(--board-line);
   object-fit: cover;
 }
@@ -538,6 +539,14 @@ h1, h2 { margin: 0; }
   color: var(--ink-dim);
   line-height: 1.6;
   margin: 10px 0 0;
+}
+.contact-name {
+  font-family: var(--font-display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-size: 1.1rem;
+  color: var(--paper);
+  margin: 4px 0 0;
 }
 
 @media (max-width: 720px) {

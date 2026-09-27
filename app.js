@@ -136,7 +136,10 @@ function renderMarkers() {
     });
     const depthTxt = p.depthCm != null ? `${p.depthCm} ซม.` : "ไม่ทราบระดับน้ำ";
     const stale = FD.ageMinutes(p.updated) > FD.STALE_WARN_MIN;
-    marker.bindPopup(`
+    // maxWidth widened from Leaflet's 300px default so the (larger) report
+    // photo thumbnail has room without the popup feeling cramped.
+    marker.bindPopup(
+      `
       <b>${escapeHtml(p.label)}</b>
       ${escapeHtml(p.sublabel || "")}<br/>
       สถานะ: <b>${FD.STATUS_LABEL_TH[p.status]}</b> (${depthTxt})<br/>
@@ -145,7 +148,9 @@ function renderMarkers() {
       ${(p.contributors || [p]).length <= 1 ? photoThumbHtml(p.photoUrl) : ""}
       ${contributorsHtml(p)}
       <br/><button class="popup-add-btn" data-key="${p.key}">เพิ่มเข้าเส้นทาง</button>
-    `);
+    `,
+      { maxWidth: 340 }
+    );
     marker.on("popupopen", (ev) => {
       const btn = ev.popup.getElement().querySelector(".popup-add-btn");
       if (btn) btn.addEventListener("click", () => toggleSelect(p.key));
