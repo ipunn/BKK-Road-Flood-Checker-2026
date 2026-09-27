@@ -13,6 +13,7 @@ let lastFetchOk = { bma: false, longdo: false };
 
 function initMap() {
   map = L.map("map", { zoomControl: true }).setView([13.7563, 100.5018], 11);
+  // Standard OSM raster tiles, light basemap — always free, no API key.
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
     maxZoom: 19,
     attribution: "&copy; OpenStreetMap contributors",
@@ -42,18 +43,23 @@ function flyToPoint(key) {
   if (marker) marker.openPopup();
 }
 
+// Bright, saturated solid colors — legible at a glance on the light basemap.
+const MARKER_COLOR = { red: "#e02f2f", yellow: "#f2a10d", green: "#1fA24a", gray: "#8a8a8a" };
+
 function renderMarkers() {
   markersLayer.clearLayers();
   markersByKey.clear();
   for (const p of visiblePoints()) {
     if (p.lat == null || p.lng == null || isNaN(p.lat) || isNaN(p.lng)) continue;
-    const color = { red: "#c0392b", yellow: "#b9770e", green: "#1e8449", gray: "#7f8c8d" }[p.status];
+    // Plain color-coded circle marker, no number on the map itself — depth
+    // detail lives in the popup on tap, so the map stays glanceable.
+    const color = MARKER_COLOR[p.status];
     const marker = L.circleMarker([p.lat, p.lng], {
-      radius: 7,
-      color,
+      radius: 8,
+      color: "#ffffff",
+      weight: 2,
       fillColor: color,
-      fillOpacity: 0.85,
-      weight: 1.5,
+      fillOpacity: 0.95,
     });
     const depthTxt = p.depthCm != null ? `${p.depthCm} ซม.` : "ไม่ทราบระดับน้ำ";
     const stale = FD.ageMinutes(p.updated) > FD.STALE_WARN_MIN;
