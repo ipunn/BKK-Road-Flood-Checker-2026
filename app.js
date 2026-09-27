@@ -274,6 +274,20 @@ function setStatusLine(text, isWarning) {
   el.classList.toggle("warning", !!isWarning);
 }
 
+// Shown only until the very first fetch cycle finishes — a first-time
+// visitor has no way to tell "still loading" from "broken" otherwise, since
+// the map itself is pannable/zoomable before any report data has arrived.
+// Never re-shown on the periodic 3-min refresh, so it can't interrupt an
+// active session.
+let firstLoadDone = false;
+function hideLoadingOverlay() {
+  if (firstLoadDone) return;
+  firstLoadDone = true;
+  const overlay = document.getElementById("loading-overlay");
+  overlay.classList.add("hidden");
+  overlay.addEventListener("transitionend", () => { overlay.hidden = true; }, { once: true });
+}
+
 async function refreshAll() {
   setStatusLine("กำลังอัปเดตข้อมูล…", false);
   const results = await Promise.allSettled([FD.loadBMA(), FD.loadLongdo(), FD.loadTraffy()]);
@@ -293,6 +307,7 @@ async function refreshAll() {
   renderMarkers();
   renderRoadList(document.getElementById("road-search").value);
   renderRoute();
+  hideLoadingOverlay(); // no-op after the first successful cycle — see its own comment
 
   const now = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
   const failures = [];
@@ -316,6 +331,21 @@ function main() {
     renderMarkers();
     renderRoadList(document.getElementById("road-search").value);
   });
+  const sidebarToggle = document.getElementById("sidebar-toggle");
+  const sidebarPanels = document.getElementById("sidebar-panels");
+  sidebarToggle.addEventListener("click", () => {
+    const expanded = sidebarToggle.getAttribute("aria-expanded") === "true";
+    sidebarToggle.setAttribute("aria-expanded", String(!expanded));
+    // Expanding/collapsing the mobile bottom sheet resizes #map (they share
+    // #app's flex-column height) — Leaflet needs invalidateSize() after the
+    // CSS transition or its tiles stay clipped to the old container size.
+    sidebarPanels.addEventListener(
+      "transitionend",
+      () => map.invalidateSize(),
+      { once: true }
+    );
+  });
+
   const cameraToggle = document.getElementById("camera-toggle");
   let cameraPinsLoaded = false;
   cameraToggle.addEventListener("click", async () => {
