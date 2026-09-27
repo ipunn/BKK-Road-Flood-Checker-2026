@@ -9,10 +9,22 @@
 </head>
 <body>
   <header id="topbar">
-    <h1>🌧️ BKK Road Flood <span class="year">2026</span></h1>
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h1>BKK Road Flood <span class="year">2026</span></h1>
+    </div>
+    <nav id="topnav">
+      <a href="index.html" class="active">แผนที่</a>
+      <a href="sources.html">แหล่งข้อมูล &amp; ความสดใหม่</a>
+    </nav>
     <div id="status-line">
       <span id="last-updated">กำลังโหลดข้อมูล…</span>
-      <button id="refresh-btn" title="Refresh now">⟳</button>
+      <button id="refresh-btn" title="โหลดข้อมูลใหม่">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path fill="currentColor" d="M13.65 2.35a6.5 6.5 0 1 0 1.6 6.65h-1.55a5 5 0 1 1-1.14-5.14L10 6h5V1l-1.35 1.35z"/>
+        </svg>
+        รีเฟรช
+      </button>
     </div>
   </header>
 
@@ -27,19 +39,30 @@
       </div>
 
       <div class="panel">
-        <h2>ค้นหาถนน</h2>
+        <div class="panel-row">
+          <h2>ค้นหาถนน</h2>
+          <label class="freshness-label" for="freshness-filter">แสดงข้อมูลไม่เกิน
+            <select id="freshness-filter">
+              <option value="15">15 นาที</option>
+              <option value="30">30 นาที</option>
+              <option value="60" selected>1 ชั่วโมง</option>
+              <option value="180">3 ชั่วโมง (ทั้งหมด)</option>
+            </select>
+          </label>
+        </div>
         <input id="road-search" type="text" placeholder="พิมพ์ชื่อถนน เช่น ลาดพร้าว, เอกชัย…" />
         <div class="legend">
           <span class="dot green"></span> ผ่านได้ (&lt;10 ซม.)
           <span class="dot yellow"></span> ผ่านได้แต่ระวัง (10–30 ซม.)
           <span class="dot red"></span> ผ่านไม่ได้ (&gt;30 ซม. / รายงานว่าผ่านไม่ได้)
           <span class="dot gray"></span> ไม่ทราบระดับน้ำ
+          <span class="stale-tag">ข้อมูลเก่า</span> = รายงานเกิน 1 ชม.
         </div>
         <div id="road-list" class="road-list"><p class="empty-hint">กำลังโหลด…</p></div>
       </div>
 
       <div class="panel disclaimer">
-        <p><strong>ไม่ใช่ช่องทางทางการ</strong> ข้อมูลจากเซ็นเซอร์ระดับน้ำของ กทม., Longdo/iTIC (กรมทางหลวง, สำนักการระบายน้ำ กทม.) โปรดติดตามประกาศทางการจาก กทม., กรมอุตุฯ, ปภ. สายด่วน กทม. <strong>1555</strong></p>
+        <p><strong>ไม่ใช่ช่องทางทางการ</strong> ข้อมูลจากเซ็นเซอร์ระดับน้ำของ กทม., Longdo/iTIC (กรมทางหลวง, สำนักการระบายน้ำ กทม.) โปรดติดตามประกาศทางการจาก กทม., กรมอุตุฯ, ปภ. สายด่วน กทม. <strong>1555</strong> — รายละเอียดแหล่งข้อมูลและความสดใหม่ดูที่หน้า <a href="sources.html">แหล่งข้อมูล &amp; ความสดใหม่</a></p>
       </div>
     </aside>
 
@@ -47,6 +70,7 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="data.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>แหล่งข้อมูล &amp; ความสดใหม่ — BKK Road Flood 2026</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header id="topbar">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true"></span>
+      <h1>BKK Road Flood <span class="year">2026</span></h1>
+    </div>
+    <nav id="topnav">
+      <a href="index.html">แผนที่</a>
+      <a href="sources.html" class="active">แหล่งข้อมูล &amp; ความสดใหม่</a>
+    </nav>
+    <div id="status-line">
+      <span id="last-updated">กำลังโหลดข้อมูล…</span>
+      <button id="refresh-btn" title="โหลดข้อมูลใหม่">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+          <path fill="currentColor" d="M13.65 2.35a6.5 6.5 0 1 0 1.6 6.65h-1.55a5 5 0 1 1-1.14-5.14L10 6h5V1l-1.35 1.35z"/>
+        </svg>
+        รีเฟรช
+      </button>
+    </div>
+  </header>
+
+  <main id="sources-page">
+    <section class="panel">
+      <h2>สถานะแหล่งข้อมูลตอนนี้</h2>
+      <div id="source-cards" class="source-cards">
+        <p class="empty-hint">กำลังโหลด…</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>แหล่งข้อมูล</h2>
+      <table class="data-table">
+        <thead>
+          <tr><th>แหล่งข้อมูล</th><th>Endpoint</th><th>ให้ข้อมูลอะไร</th><th>รอบอัปเดต</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>BMA road water-level sensors</td>
+            <td><a href="https://floodbangkok.bangkok.go.th" target="_blank" rel="noopener">floodbangkok.bangkok.go.th</a></td>
+            <td>เซ็นเซอร์วัดระดับน้ำ ~254 จุดทั่วกรุงเทพฯ ค่าความลึกเป็นเซนติเมตรแบบสด</td>
+            <td>~3 นาที</td>
+          </tr>
+          <tr>
+            <td>Longdo Traffic / iTIC event feed</td>
+            <td><a href="https://traffic.longdo.com" target="_blank" rel="noopener">event.longdo.com/feed/json</a></td>
+            <td>รายงานน้ำท่วมถนนจากกรมทางหลวง, สำนักการระบายน้ำ กทม., และผู้ใช้ iTIC (ทั้งประเทศ — กรองเฉพาะเขตกรุงเทพฯ)</td>
+            <td>ตามเวลาจริง (ผู้รายงาน)</td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="panel">
+      <h2>เกณฑ์การประเมินว่า "ผ่านได้หรือไม่"</h2>
+      <table class="data-table">
+        <thead><tr><th>ระดับน้ำ</th><th>สถานะ</th><th>ความหมาย</th></tr></thead>
+        <tbody>
+          <tr><td>&lt; 10 ซม.</td><td><span class="badge green">CLEAR</span></td><td>ผ่านได้</td></tr>
+          <tr><td>10–30 ซม.</td><td><span class="badge yellow">CAUTION</span></td><td>ผ่านได้แต่ระวัง / รถสูงเท่านั้น</td></tr>
+          <tr><td>&gt; 30 ซม.</td><td><span class="badge red">BLOCKED</span></td><td>ถือว่าผ่านไม่ได้</td></tr>
+          <tr><td>ไม่ระบุ</td><td><span class="badge gray">UNKNOWN</span></td><td>ไม่ทราบความลึก — ถือเป็นข้อควรระวัง ไม่ใช่ "ผ่านได้"</td></tr>
+        </tbody>
+      </table>
+      <p class="note">รายงานที่ระบุคำว่า "ผ่านไม่ได้" / "impassable" จะถูกจัดเป็น BLOCKED เสมอ ไม่ว่าค่าตัวเลขจะเป็นเท่าใด
+      เกณฑ์นี้ปรับได้ในไฟล์ <code>data.js</code> (ค่าคงที่ <code>THRESH_YELLOW</code>, <code>THRESH_RED</code>)</p>
+    </section>
+
+    <section class="panel">
+      <h2>ความสดใหม่ของข้อมูล</h2>
+      <ul class="bullet-list">
+        <li>หน้าเว็บจะแสดงเฉพาะจุดที่มีรายงาน <strong>active</strong> ในขณะนี้เท่านั้น — เซ็นเซอร์ BMA ที่ยังไม่ปิดสถานะน้ำท่วม (ไม่มี <code>end_flood</code>) และรายงานภายใน 3 ชั่วโมงล่าสุด, หรือรายงาน Longdo ที่ยังไม่ถึงเวลา <code>stop</code> ที่ระบุ</li>
+        <li>หน้าแผนที่มีตัวกรอง "แสดงข้อมูลไม่เกิน" ให้จำกัดช่วงเวลาแคบลงได้ (15 นาที – 3 ชั่วโมง) เพื่อลดความเสี่ยงจากข้อมูลที่อาจเปลี่ยนไปแล้ว</li>
+        <li>จุดที่มีอายุรายงานเกิน 60 นาทีจะมีป้าย <span class="stale-tag">ข้อมูลเก่า</span> กำกับไว้เสมอ แม้จะยังผ่านตัวกรองก็ตาม</li>
+        <li>หากโหลดข้อมูลจากแหล่งใดไม่สำเร็จ ระบบจะแสดงคำเตือนที่แถบสถานะด้านบน แทนที่จะแสดงตัวเลขเก่าราวกับเป็นข้อมูลล่าสุด</li>
+      </ul>
+    </section>
+
+    <section class="panel">
+      <h2>ข้อจำกัด</h2>
+      <ul class="bullet-list">
+        <li>ครอบคลุมเฉพาะจุดที่มีเซ็นเซอร์ BMA หรือมีผู้รายงานผ่าน Longdo/iTIC เท่านั้น ซอยเล็กจำนวนมากอาจไม่มีข้อมูล</li>
+        <li>ไม่มีระบบนำทาง (routing) — เป็นเพียงเครื่องมือตรวจสอบถนนที่เลือกเอง ควรใช้ร่วมกับ Google Maps / Longdo Maps</li>
+        <li>เกณฑ์ความลึกเป็นการประมาณอย่างง่าย ความสามารถผ่านได้จริงยังขึ้นกับความสูงใต้ท้องรถ ความแรงของกระแสน้ำ และสิ่งกีดขวางใต้น้ำที่เซ็นเซอร์ตรวจไม่ได้</li>
+      </ul>
+      <p class="note"><strong>ไม่ใช่ช่องทางทางการ</strong> โปรดติดตามประกาศทางการจาก กทม., กรมอุตุฯ, ปภ. สายด่วน กทม. <strong>1555</strong></p>
+    </section>
+  </main>
+
+  <script src="data.js"></script>
+  <script src="sources.js"></script>
+</body>
+</html>
