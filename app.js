@@ -4,7 +4,7 @@
 
 const FD = window.FloodData;
 
-let map, markersLayer;
+let map, markersLayer, camerasLayer;
 let markersByKey = new Map();
 let allPoints = []; // every currently-active point, before the freshness filter
 let selectedKeys = new Set();
@@ -19,6 +19,40 @@ function initMap() {
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(map);
   markersLayer = L.layerGroup().addTo(map);
+  camerasLayer = L.layerGroup(); // not added to map — off by default, see CONTEXT.md "Camera pin"
+}
+
+// Camera pins are a static snapshot (docs/adr/0002), fetched once — not part
+// of the live refresh cycle the three report sources use. They carry no
+// Passability status, aren't affected by the freshness filter, aren't
+// merged, and can't be added to a route (see CONTEXT.md "Camera pin").
+async function loadCameraPins() {
+  let cameras;
+  try {
+    const res = await fetch("cameras.json");
+    cameras = await res.json();
+  } catch (err) {
+    console.error("Failed to load cameras.json", err);
+    return false; // caller must be able to retry, not treat this as permanently loaded
+  }
+  for (const cam of cameras) {
+    if (cam.lat == null || cam.lng == null || isNaN(cam.lat) || isNaN(cam.lng)) continue;
+    const marker = L.circleMarker([cam.lat, cam.lng], {
+      radius: 5,
+      color: "#ffffff",
+      weight: 1.5,
+      fillColor: "#b8863b", // matches --brass in style.css; Leaflet's SVG renderer sets this as a raw attribute, not via CSS, so var() won't resolve here
+      fillOpacity: 0.9,
+    });
+    marker.bindPopup(`
+      <b>${escapeHtml(cam.label)}</b>
+      ${escapeHtml(cam.sublabel || "")}<br/>
+      <span class="citizen-note">เปิดวิดีโอสดของกล้อง CCTV กทม. — ลิงก์นี้เปิดหน้าแรกของระบบ BMA Traffic ทั่วไป ไม่ได้เลือกกล้องตัวนี้โดยตรง (ระบบของ กทม. ยังไม่รองรับลิงก์ตรงถึงกล้องแต่ละตัว)</span><br/>
+      <a href="https://cpudapp.bangkok.go.th/bmatraffic/" target="_blank" rel="noopener noreferrer">เปิดวิดีโอสด BMA Traffic ↗</a>
+    `);
+    camerasLayer.addLayer(marker);
+  }
+  return true;
 }
 
 function escapeHtml(s) {
@@ -56,13 +90,26 @@ function isCitizenOnly(p) {
   return contributors.every((c) => c.source === "Traffy Fondue");
 }
 
+// Citizen report photo: a small clickable thumbnail opening the full-size
+// image in a new tab. See CONTEXT.md "Citizen report" — shown under the same
+// "unofficial, best-effort" framing as the rest of the Citizen report data,
+// no separate moderation caveat.
+function photoThumbHtml(url) {
+  // photoUrl is externally-submitted (Traffy citizen report data), so only
+  // http(s) is allowed as an href — rejects javascript:/data: URIs that
+  // would otherwise execute on click despite escapeHtml (which only escapes
+  // markup metacharacters, not URI schemes).
+  if (!url || !/^https?:\/\//i.test(url)) return "";
+  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="report-photo-link"><img class="report-photo-thumb" src="${escapeHtml(url)}" alt="รูปถ่ายจากผู้รายงาน" loading="lazy"/></a>`;
+}
+
 function contributorsHtml(p) {
   const contributors = p.contributors || [p];
   if (contributors.length <= 1) return "";
   const rows = contributors
     .map((c) => {
       const depthTxt = c.depthCm != null ? `${c.depthCm} ซม.` : "?";
-      return `<li>${escapeHtml(c.source)} &middot; ${FD.timeAgoTh(c.updated)} &middot; ${depthTxt}</li>`;
+      return `<li>${escapeHtml(c.source)} &middot; ${FD.timeAgoTh(c.updated)} &middot; ${depthTxt}${photoThumbHtml(c.photoUrl)}</li>`;
     })
     .join("");
   return `<div class="corroboration-note">ยืนยันจาก ${contributors.length} รายงาน:<ul>${rows}</ul></div>`;
@@ -95,6 +142,7 @@ function renderMarkers() {
       สถานะ: <b>${FD.STATUS_LABEL_TH[p.status]}</b> (${depthTxt})<br/>
       แหล่งข้อมูล: ${escapeHtml(p.source)} &middot; ${FD.timeAgoTh(p.updated)}${stale ? " &middot; <span class=\"stale-tag\">ข้อมูลเก่า</span>" : ""}
       ${citizen ? '<p class="citizen-note">รายงานจากประชาชน (Traffy Fondue) — ไม่ยืนยันโดยเซ็นเซอร์</p>' : ""}
+      ${(p.contributors || [p]).length <= 1 ? photoThumbHtml(p.photoUrl) : ""}
       ${contributorsHtml(p)}
       <br/><button class="popup-add-btn" data-key="${p.key}">เพิ่มเข้าเส้นทาง</button>
     `);
@@ -262,6 +310,21 @@ function main() {
     maxAgeMinutes = parseInt(e.target.value, 10);
     renderMarkers();
     renderRoadList(document.getElementById("road-search").value);
+  });
+  const cameraToggle = document.getElementById("camera-toggle");
+  let cameraPinsLoaded = false;
+  cameraToggle.addEventListener("click", async () => {
+    const showing = cameraToggle.getAttribute("aria-pressed") === "true";
+    if (!showing && !cameraPinsLoaded) {
+      cameraPinsLoaded = await loadCameraPins(); // only true on success — retries on the next click if it failed
+    }
+    if (showing) {
+      map.removeLayer(camerasLayer);
+    } else {
+      camerasLayer.addTo(map);
+    }
+    cameraToggle.setAttribute("aria-pressed", String(!showing));
+    cameraToggle.classList.toggle("active", !showing);
   });
   refreshAll();
   setInterval(refreshAll, FD.REFRESH_MS);

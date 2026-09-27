@@ -34,6 +34,15 @@ falling within the same freshness window. Corroborated reports are merged into
 a single map marker instead of shown as separate pins, with each contributing
 report listed as evidence.
 
+**Camera pin**:
+A BMA public traffic-camera location shown on the map, independent of any
+flood report. It carries no passability status of its own — it links out to
+BMA's viewer (generic homepage only; no BMA camera supports a link to its own
+specific view) rather than showing a status or contributing to a route
+verdict. Sourced from a vendored snapshot, not a live fetch — see ADR-0002.
+_Avoid_: CCTV point, camera marker (this app's map already uses "marker" for
+report pins — "pin" keeps the two visually and conceptually distinct)
+
 **Passability status**:
 The clear / caution / blocked / unknown verdict assigned to a single report or
 to a selected route (the worst status among its reports). Carried by ink color

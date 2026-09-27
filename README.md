@@ -8,13 +8,18 @@ Department (TMD), and DDPM. BMA flood hotline: **1555**.
 
 ## What it does
 
-- Pulls **live** flood reports from two public feeds directly in your browser (no
+- Pulls **live** flood reports from three public feeds directly in your browser (no
   backend, no API key, no cached/mock data — if a feed is down, the status line says so
   instead of showing stale numbers as if they were fresh).
 - Colour-codes each reported point by car passability using a simple depth threshold.
 - Lets you build a "my route" list by clicking points on the map or in the road list,
   and gives a plain-language verdict (ผ่านได้ / ผ่านได้แต่ระวัง / ผ่านไม่ได้) for the
   worst point on that list.
+- Shows the citizen-submitted photo on a Traffy Fondue report, when one exists, so you
+  can judge it yourself instead of trusting a status dot alone.
+- Optional toggle for ~230 BMA public CCTV camera locations, for roads with no active
+  report at all — each pin links out to BMA's own viewer (no per-camera deep link
+  exists in BMA's system, so it opens their general viewer, not that specific camera).
 
 ## Data sources
 

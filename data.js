@@ -206,6 +206,7 @@
         lat,
         lng,
         text,
+        photoUrl: props.photo_url || null,
       });
     }
 
