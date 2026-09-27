@@ -307,6 +307,14 @@ h1, h2 { margin: 0; }
    sensor-confirmed" as a separate dimension from the status color itself
    (kept, not overridden) — see CONTEXT.md "Citizen report". */
 .dot.citizen { border: 1px dashed var(--ink); }
+/* Unmeasured ("gray") citizen report with a photo attached — cues "look at
+   the photo yourself" instead of guessing a severity. See docs/adr/0003. */
+.photo-cue {
+  font-size: 0.68rem;
+  margin-right: 3px;
+  vertical-align: middle;
+  line-height: 1;
+}
 
 .citizen-note {
   font-family: var(--font-body);

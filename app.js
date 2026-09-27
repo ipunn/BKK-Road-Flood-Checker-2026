@@ -8,7 +8,7 @@ let map, markersLayer, camerasLayer;
 let markersByKey = new Map();
 let allPoints = []; // every currently-active point, before the freshness filter
 let selectedKeys = new Set();
-let maxAgeMinutes = 60; // freshness filter — only show points reported within this window
+let maxAgeMinutes = 180; // freshness filter — only show points reported within this window
 let lastFetchOk = { bma: false, longdo: false, traffy: false };
 
 function initMap() {
@@ -61,8 +61,15 @@ function escapeHtml(s) {
   }[c]));
 }
 
-function statusDotHtml(status, citizen) {
-  return `<span class="dot ${status}${citizen ? " citizen" : ""}"></span>`;
+// hasPhoto: true only for an unmeasured ("gray") report that carries a
+// citizen-submitted photo — flags it in the list as "we don't know the
+// depth, but you can look at the photo and judge for yourself" rather than
+// guessing a severity. See docs/adr/0003.
+function statusDotHtml(status, citizen, hasPhoto) {
+  return (
+    `<span class="dot ${status}${citizen ? " citizen" : ""}"></span>` +
+    (hasPhoto ? `<span class="photo-cue" title="มีภาพประกอบ — ดูภาพเพื่อประเมินด้วยตนเอง">📷</span>` : "")
+  );
 }
 
 function visiblePoints() {
@@ -85,6 +92,13 @@ const MARKER_COLOR = { red: "#e02f2f", yellow: "#f2a10d", green: "#1fA24a", gray
 // report merged with a BMA/Longdo point (mergeCorroboration) IS confirmed by
 // that other source, so it must not show the "unconfirmed" treatment.
 // See CONTEXT.md "Citizen report" / "Corroboration".
+// Unmeasured ("gray") report with a real photo — the camera-cue condition,
+// factored out so the road list and route list can't drift apart on when to
+// show it. See docs/adr/0003.
+function hasUnverifiedPhoto(p) {
+  return p.status === "gray" && !!p.photoUrl;
+}
+
 function isCitizenOnly(p) {
   const contributors = p.contributors || [p];
   return contributors.every((c) => c.source === "Traffy Fondue");
@@ -126,15 +140,27 @@ function renderMarkers() {
     // sensor-confirmed — a separate dimension from the status color itself.
     const color = MARKER_COLOR[p.status];
     const citizen = isCitizenOnly(p);
+    // Gray (unknown) markers are drawn smaller/fainter than a confirmed
+    // severity (red/yellow/green) so a map with many unmeasured reports
+    // doesn't visually drown out the ones we actually have a verdict for.
+    const unknown = p.status === "gray";
     const marker = L.circleMarker([p.lat, p.lng], {
-      radius: 8,
+      radius: unknown ? 5 : 8,
       color: "#ffffff",
       weight: 2,
       fillColor: color,
-      fillOpacity: 0.95,
+      fillOpacity: unknown ? 0.65 : 0.95,
       dashArray: citizen ? "3 3" : null,
     });
-    const depthTxt = p.depthCm != null ? `${p.depthCm} ซม.` : "ไม่ทราบระดับน้ำ";
+    // A gray (unmeasured) citizen report with a photo: don't repeat "unknown"
+    // in both slots — point at the photo instead, since that's the actual
+    // evidence available. See docs/adr/0003.
+    const depthTxt =
+      p.depthCm != null
+        ? `${p.depthCm} ซม.`
+        : hasUnverifiedPhoto(p)
+        ? "มีภาพประกอบ"
+        : "ไม่ทราบระดับน้ำ";
     const stale = FD.ageMinutes(p.updated) > FD.STALE_WARN_MIN;
     // maxWidth widened from Leaflet's 300px default so the (larger) report
     // photo thumbnail has room without the popup feeling cramped.
@@ -183,7 +209,7 @@ function renderRoadList(filterText) {
       return `
       <div class="road-item ${selectedKeys.has(p.key) ? "selected" : ""}" data-key="${p.key}">
         <span class="road-item-main" data-key="${p.key}" title="คลิกเพื่อไปยังตำแหน่งบนแผนที่">
-          ${statusDotHtml(p.status, isCitizenOnly(p))}
+          ${statusDotHtml(p.status, isCitizenOnly(p), hasUnverifiedPhoto(p))}
           <span class="name">${escapeHtml(p.label)}</span>
         </span>
         <span class="depth">${p.depthCm != null ? p.depthCm + " ซม." : "?"}</span>
@@ -230,7 +256,7 @@ function renderRoute() {
       return `
       <div class="route-item">
         <span class="route-item-main" data-key="${p.key}" title="คลิกเพื่อไปยังตำแหน่งบนแผนที่">
-          ${statusDotHtml(p.status, isCitizenOnly(p))}
+          ${statusDotHtml(p.status, isCitizenOnly(p), hasUnverifiedPhoto(p))}
           <span class="name">${escapeHtml(p.label)}</span>
           <span class="depth">${p.depthCm != null ? p.depthCm + " ซม." : "?"}</span>
           <span class="age ${stale ? "stale" : ""}">${FD.timeAgoTh(p.updated)}</span>

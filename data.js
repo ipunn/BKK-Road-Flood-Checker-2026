@@ -11,10 +11,26 @@
   // Fondue map (bangkok.traffy.in.th) — see docs/adr/0001 for why this is
   // used instead of Traffy's documented, auth-gated Exchange API.
   const TRAFFY_API = "https://publicapi.traffy.in.th/teamchadchart-stat-api/geojson/v2";
+  // Traffy attaches this exact stock "ศูนย์กทม. 1555" call-center logo as
+  // photo_url on tickets forwarded without an actual citizen photo — not a
+  // real per-report image. Confirmed live: ~56% of tickets share this one
+  // URL verbatim while every genuine upload has a distinct one. Treated as
+  // "no photo" so we never invite a user to "look at the photo" for evidence
+  // that isn't there.
+  const TRAFFY_PLACEHOLDER_PHOTO_URL =
+    "https://storage.googleapis.com/traffy_public_bucket/attachment/2022-12/da2125e781282589d482070c3dba1726aa16a4a7.jpg";
 
   const REFRESH_MS = 3 * 60 * 1000; // 3 min, matches BMA sensor refresh cadence
   const BMA_STALE_MS = 3 * 60 * 60 * 1000; // ignore BMA notifications older than 3h
   const LONGDO_FALLBACK_MS = 3 * 60 * 60 * 1000; // if a Longdo report has no "stop", expire after 3h
+  // Absolute ceiling applied even when a Longdo report DOES have a `stop`.
+  // Some entries carry a `stop` that rolls forward with the current day
+  // (observed live: start=2026-01-30, stop still "today 23:59:59" almost 8
+  // months later) — trusting `stop` alone can keep a dead report "active"
+  // indefinitely. Set well above the longest legitimate multi-day highway
+  // advisory observed live (~18.5 days) so real ongoing reports aren't
+  // dropped early, but well below the observed anomaly (~241 days).
+  const LONGDO_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
   const TRAFFY_FALLBACK_MS = LONGDO_FALLBACK_MS; // same 3h closure fallback, reused per spec
   const STALE_WARN_MIN = 60; // flag a point as "stale" in the UI past this age
 
@@ -45,15 +61,32 @@
     return m ? parseFloat(m[1]) : null;
   }
 
-  function classify(depthCm, text) {
+  // trustedDepth: true only for a directly-measured sensor reading (BMA) —
+  // that's authoritative, so a vague/partial text mention like "small cars
+  // can pass" must not be allowed to downgrade it. For Longdo/Traffy,
+  // depthCm is itself only ever regex-scraped from this same free text, so
+  // the explicit-claim override is at least as reliable as the number.
+  function classify(depthCm, text, { trustedDepth = false } = {}) {
     const t = (text || "").toLowerCase();
-    if (/ผ่านไม่ได้|impassable|not\s*passable/i.test(t)) return "red";
+    // "ไม่สามารถผ่าน(ได้)?" ("cannot pass") is a fixed Thai idiom that
+    // contains "ผ่านได้" verbatim — matched here FIRST so it can't fall
+    // through to the positive-passable check below. Deliberately NOT a
+    // generic "ไม่ ... ผ่านได้ within N characters" window: that also
+    // matched unrelated negations sharing the sentence (e.g. "ไม่หนัก
+    // ผ่านได้สบายๆ" — "ไม่" negates "หนัก", not "ผ่านได้" — which must stay
+    // "green"), so this only matches the specific fixed collocation.
+    if (/ผ่านไม่ได้|ไม่สามารถผ่าน(?:ได้)?|impassable|not\s*passable/i.test(t)) return "red";
+    // An explicit "passable" claim is evidence about the actual outcome, not
+    // a guess — same footing as the "impassable" check above, and checked
+    // before any parsed depth figure so a stray/unrelated cm number in the
+    // same text (a historical peak, a different spot) can't override it. See
+    // docs/adr/0003.
+    if (!(trustedDepth && depthCm != null) && /ผ่านได้|passable/i.test(t)) return "green";
     if (depthCm != null) {
       if (depthCm > THRESH_RED) return "red";
       if (depthCm >= THRESH_YELLOW) return "yellow";
       return "green";
     }
-    if (/เข่า|knee|สูง|shin/i.test(t)) return "yellow";
     return "gray";
   }
 
@@ -63,9 +96,21 @@
     return status === "red" ? "yellow" : status;
   }
 
+  // A malformed date string (`new Date(...).getTime()`) yields NaN, which
+  // is `!= null` — so callers doing `x != null` staleness checks would treat
+  // an unparseable date as a valid, very-far-future timestamp instead of
+  // "no date at all". Normalized to null here so every such check behaves
+  // the same as a genuinely missing field.
+  function parseDateMs(s) {
+    if (!s) return null;
+    const ms = new Date(String(s).replace(" ", "T")).getTime();
+    return Number.isNaN(ms) ? null : ms;
+  }
+
   function ageMinutes(iso) {
-    if (!iso) return Infinity;
-    return (Date.now() - new Date(iso).getTime()) / 60000;
+    const ms = parseDateMs(iso);
+    if (ms == null) return Infinity;
+    return (Date.now() - ms) / 60000;
   }
 
   function timeAgoTh(iso) {
@@ -116,7 +161,7 @@
         key: `bma-${sid}`,
         label: profile.road || profile.name,
         sublabel: `${profile.name} · ${profile.district || ""}`,
-        status: classify(depthCm, text),
+        status: classify(depthCm, text, { trustedDepth: true }),
         depthCm,
         updated: ts,
         source: "BMA",
@@ -140,9 +185,22 @@
       const lng = parseFloat(e.longitude);
       if (isNaN(lat) || isNaN(lng) || !inBangkok(lat, lng)) continue;
 
-      const stopMs = e.stop ? new Date(e.stop.replace(" ", "T")).getTime() : null;
-      const startMs = e.start ? new Date(e.start.replace(" ", "T")).getTime() : null;
-      const expired = stopMs ? stopMs < now : startMs ? now - startMs > LONGDO_FALLBACK_MS : false;
+      const stopMs = parseDateMs(e.stop);
+      const startMs = parseDateMs(e.start);
+      // No `stop` at all: use the tight LONGDO_FALLBACK_MS (our only
+      // staleness signal). A `stop` present: trust it, but still cap age at
+      // LONGDO_MAX_AGE_MS — see that constant's comment for why `stop` alone
+      // isn't safe to trust indefinitely. See CONTEXT.md "Event report".
+      const stopExpired = stopMs != null && stopMs < now;
+      // Age-cap only kicks in when there's a `start` to measure it from.
+      // `stop` present but `start` missing isn't observed in the live feed
+      // (every flood event currently carries both) — in that theoretical
+      // case, trust `stop` alone rather than dropping a report `stop` says
+      // is still active. Only when NEITHER is present is there truly no
+      // signal at all, so that's the one case treated as expired outright.
+      const maxAgeMs = stopMs != null ? LONGDO_MAX_AGE_MS : LONGDO_FALLBACK_MS;
+      const ageExpired = startMs != null ? now - startMs > maxAgeMs : stopMs == null;
+      const expired = stopExpired || ageExpired;
       if (expired) continue;
 
       const text = `${e.title_en || e.title || ""} — ${e.description_en || e.description || ""}`;
@@ -170,6 +228,29 @@
     const now = Date.now();
     const points = [];
     let floodTicketCount = 0;
+
+    // A real citizen-uploaded photo gets a unique per-ticket URL (observed:
+    // content-addressed, e.g. .../attachment/<yyyy-mm>/<hash>.<ext>). A URL
+    // repeated across multiple tickets in this same fetch is therefore a
+    // shared stock/placeholder image, not real evidence — this is how we
+    // caught the "ศูนย์กทม. 1555" call-center logo (reused on ~56% of
+    // tickets observed live) without hardcoding that one URL, so detection
+    // still works if Traffy adds or rotates placeholder assets.
+    // TRAFFY_PLACEHOLDER_PHOTO_URL is kept as a belt-and-suspenders fallback
+    // for a fetch too small to show the duplication. See docs/adr/0003.
+    const photoUrlCounts = new Map();
+    for (const f of features) {
+      const u = f.properties && f.properties.photo_url;
+      if (u) photoUrlCounts.set(u, (photoUrlCounts.get(u) || 0) + 1);
+    }
+    // Threshold of 3+ rather than "any duplicate" — two tickets legitimately
+    // sharing one photo (a resubmission, or two citizens uploading the same
+    // shot) is plausible; the actual placeholder repeats two orders of
+    // magnitude more than that (168 of 300 tickets observed live), so 3+
+    // still catches it with room to spare while not zeroing out a real but
+    // coincidentally-duplicated photo.
+    const isRealPhoto = (url) =>
+      !!url && url !== TRAFFY_PLACEHOLDER_PHOTO_URL && photoUrlCounts.get(url) < 3;
 
     for (const f of features) {
       const props = f.properties || {};
@@ -206,7 +287,7 @@
         lat,
         lng,
         text,
-        photoUrl: props.photo_url || null,
+        photoUrl: isRealPhoto(props.photo_url) ? props.photo_url : null,
       });
     }
 
@@ -269,11 +350,17 @@
       if (group.length === 1) return { ...group[0], contributors: [group[0]] };
       const worst = group.reduce((a, b) => (STATUS_RANK[b.status] > STATUS_RANK[a.status] ? b : a));
       const newest = group.reduce((a, b) => (ageMinutes(b.updated) < ageMinutes(a.updated) ? b : a));
+      // A same-rank contributor's photo must survive the merge even when
+      // `worst` (picked by status alone) isn't the one that has it — the
+      // gray/photo cue in app.js checks the merged point's own photoUrl, not
+      // per-contributor, so dropping it here silently hides real evidence.
+      const photoUrl = group.map((p) => p.photoUrl).find((u) => u) || null;
       return {
         ...worst,
         key: group.map((p) => p.key).join("+"),
         updated: newest.updated,
         source: [...new Set(group.map((p) => p.source))].join(", "),
+        photoUrl,
         contributors: group,
       };
     });
