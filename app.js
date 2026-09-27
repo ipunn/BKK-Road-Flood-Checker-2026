@@ -147,7 +147,12 @@ function renderMarkers() {
     const marker = L.circleMarker([p.lat, p.lng], {
       radius: unknown ? 5 : 8,
       color: "#ffffff",
-      weight: 2,
+      // Gray markers get a thicker ring than the weight/radius de-emphasis
+      // above would otherwise give them: the ring is the "there's a clickable
+      // point here" affordance, a separate concern from the fill's "how
+      // confident is this verdict" signal, so it shouldn't shrink alongside
+      // the fill on a busy/gray basemap.
+      weight: unknown ? 3 : 2,
       fillColor: color,
       fillOpacity: unknown ? 0.65 : 0.95,
       dashArray: citizen ? "3 3" : null,
