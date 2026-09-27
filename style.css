@@ -1,0 +1,212 @@
+:root {
+  --green: #22a55c;
+  --yellow: #e8a712;
+  --red: #d63b3b;
+  --gray: #9aa1a8;
+  --bg: #0f1115;
+  --panel: #171a20;
+  --border: #2a2e37;
+  --text: #e8eaed;
+  --text-dim: #9aa1a8;
+  --accent: #4da3ff;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Noto Sans Thai", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+#topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+}
+
+#topbar h1 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+#topbar .year { color: var(--accent); }
+
+#status-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  color: var(--text-dim);
+}
+
+#refresh-btn {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 6px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 0.95rem;
+}
+#refresh-btn:hover { background: var(--border); }
+
+#app {
+  display: flex;
+  height: calc(100vh - 49px);
+}
+
+#sidebar {
+  width: 340px;
+  min-width: 340px;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+#map {
+  flex: 1;
+  background: #1a1d23;
+}
+
+.panel {
+  background: #14171c;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px;
+}
+.panel h2 {
+  font-size: 0.95rem;
+  margin: 0 0 8px 0;
+}
+.panel h2 .hint {
+  font-weight: normal;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+.empty-hint {
+  color: var(--text-dim);
+  font-size: 0.85rem;
+  margin: 4px 0;
+}
+
+#road-search {
+  width: 100%;
+  padding: 7px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: #0f1115;
+  color: var(--text);
+  margin-bottom: 8px;
+  font-size: 0.9rem;
+}
+
+.legend {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 3px;
+  vertical-align: middle;
+}
+.dot.green { background: var(--green); }
+.dot.yellow { background: var(--yellow); }
+.dot.red { background: var(--red); }
+.dot.gray { background: var(--gray); }
+
+.road-list {
+  max-height: 40vh;
+  overflow-y: auto;
+}
+
+.road-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+}
+.road-item:hover { background: var(--border); }
+.road-item .name { flex: 1; }
+.road-item .depth { color: var(--text-dim); font-size: 0.78rem; white-space: nowrap; }
+.road-item.selected { background: rgba(77,163,255,0.15); }
+
+.route-list .route-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 4px;
+  font-size: 0.85rem;
+  border-bottom: 1px solid var(--border);
+}
+.route-list .route-item:last-child { border-bottom: none; }
+.route-item .remove-btn {
+  cursor: pointer;
+  color: var(--text-dim);
+  background: none;
+  border: none;
+  font-size: 1rem;
+}
+.route-item .remove-btn:hover { color: var(--red); }
+
+.verdict {
+  margin-top: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  font-weight: bold;
+  font-size: 0.95rem;
+  text-align: center;
+}
+.verdict.hidden { display: none; }
+.verdict.ok { background: rgba(34,165,92,0.15); color: var(--green); border: 1px solid var(--green); }
+.verdict.caution { background: rgba(232,167,18,0.15); color: var(--yellow); border: 1px solid var(--yellow); }
+.verdict.blocked { background: rgba(214,59,59,0.15); color: var(--red); border: 1px solid var(--red); }
+
+.disclaimer p {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  margin: 0;
+  line-height: 1.5;
+}
+
+.leaflet-popup-content {
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+.leaflet-popup-content b { display: block; margin-bottom: 2px; }
+.popup-add-btn {
+  margin-top: 6px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--accent);
+  background: rgba(77,163,255,0.1);
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 720px) {
+  #app { flex-direction: column; }
+  #sidebar { width: 100%; min-width: 0; max-height: 45vh; }
+  #map { flex: 1; }
+}

@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>BKK Road Flood 2026 — เช็คน้ำท่วมถนนกรุงเทพฯ</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header id="topbar">
+    <h1>🌧️ BKK Road Flood <span class="year">2026</span></h1>
+    <div id="status-line">
+      <span id="last-updated">กำลังโหลดข้อมูล…</span>
+      <button id="refresh-btn" title="Refresh now">⟳</button>
+    </div>
+  </header>
+
+  <div id="app">
+    <aside id="sidebar">
+      <div class="panel">
+        <h2>เส้นทางของฉัน <span class="hint">(เลือกถนนที่จะผ่าน)</span></h2>
+        <div id="route-list" class="route-list">
+          <p class="empty-hint">ยังไม่ได้เลือกถนน — คลิกจากรายการด้านล่าง หรือคลิกหมุดบนแผนที่</p>
+        </div>
+        <div id="route-verdict" class="verdict hidden"></div>
+      </div>
+
+      <div class="panel">
+        <h2>ค้นหาถนน</h2>
+        <input id="road-search" type="text" placeholder="พิมพ์ชื่อถนน เช่น ลาดพร้าว, เอกชัย…" />
+        <div class="legend">
+          <span class="dot green"></span> ผ่านได้ (&lt;10 ซม.)
+          <span class="dot yellow"></span> ผ่านได้แต่ระวัง (10–30 ซม.)
+          <span class="dot red"></span> ผ่านไม่ได้ (&gt;30 ซม. / รายงานว่าผ่านไม่ได้)
+          <span class="dot gray"></span> ไม่ทราบระดับน้ำ
+        </div>
+        <div id="road-list" class="road-list"><p class="empty-hint">กำลังโหลด…</p></div>
+      </div>
+
+      <div class="panel disclaimer">
+        <p><strong>ไม่ใช่ช่องทางทางการ</strong> ข้อมูลจากเซ็นเซอร์ระดับน้ำของ กทม., Longdo/iTIC (กรมทางหลวง, สำนักการระบายน้ำ กทม.) โปรดติดตามประกาศทางการจาก กทม., กรมอุตุฯ, ปภ. สายด่วน กทม. <strong>1555</strong></p>
+      </div>
+    </aside>
+
+    <main id="map"></main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+  <script src="app.js"></script>
+</body>
+</html>
