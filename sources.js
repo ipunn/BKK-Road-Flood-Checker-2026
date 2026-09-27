@@ -79,7 +79,7 @@ async function refresh() {
         true,
         {},
         points,
-        `<p class="note">เซ็นเซอร์ทั้งหมด ${sensorCount} จุด &middot; ดึงรายงานล่าสุด ${notificationCount} รายการต่อรอบ</p>`
+        `<p class="note">เซ็นเซอร์ ${sensorCount} จุด &middot; ${notificationCount} รายงานต่อรอบ</p>`
       )
     );
   } else {
@@ -94,7 +94,7 @@ async function refresh() {
         true,
         {},
         points,
-        `<p class="note">เหตุการณ์ทั้งหมดในฟีด ${eventCount} รายการ &middot; ประเภทน้ำท่วม ${floodEventCount} รายการ (ทั้งประเทศ) &middot; ในเขตกรุงเทพฯ ที่ยัง active ${points.length} รายการ</p>`
+        `<p class="note">ฟีด ${eventCount} รายการ &middot; น้ำท่วม ${floodEventCount} รายการ (ทั้งประเทศ) &middot; active ในกรุงเทพฯ ${points.length} รายการ</p>`
       )
     );
   } else {
@@ -109,8 +109,8 @@ async function refresh() {
         true,
         {},
         points,
-        `<p class="note">ตั๋วทั้งหมดในฟีด ${ticketCount} รายการ &middot; ประเภทน้ำท่วม ${floodTicketCount} รายการ &middot; ในเขตกรุงเทพฯ ที่ยัง active ${points.length} รายการ</p>
-         <p class="note citizen-note">แหล่งข้อมูลนี้เป็น endpoint ที่ไม่มีเอกสารทางการ (unofficial) ของ Traffy Fondue — อาจเปลี่ยนแปลงหรือหยุดทำงานได้โดยไม่แจ้งล่วงหน้า สถานะจะถูกจำกัดไว้ที่ระดับ "ผ่านได้แต่ระวัง" สูงสุด เนื่องจากเป็นรายงานจากประชาชนที่ยังไม่ผ่านการยืนยันจากเซ็นเซอร์</p>`
+        `<p class="note">ตั๋วในฟีด ${ticketCount} รายการ &middot; น้ำท่วม ${floodTicketCount} รายการ &middot; active ${points.length} รายการ</p>
+         <p class="note citizen-note">Endpoint ไม่เป็นทางการ อาจเปลี่ยนแปลงได้ — จำกัดสถานะสูงสุดที่ "ระวัง" เพราะยังไม่ยืนยันโดยเซ็นเซอร์</p>`
       )
     );
   } else {

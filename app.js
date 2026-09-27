@@ -47,8 +47,8 @@ async function loadCameraPins() {
     marker.bindPopup(`
       <b>${escapeHtml(cam.label)}</b>
       ${escapeHtml(cam.sublabel || "")}<br/>
-      <span class="citizen-note">เปิดวิดีโอสดของกล้อง CCTV กทม. — ลิงก์นี้เปิดหน้าแรกของระบบ BMA Traffic ทั่วไป ไม่ได้เลือกกล้องตัวนี้โดยตรง (ระบบของ กทม. ยังไม่รองรับลิงก์ตรงถึงกล้องแต่ละตัว)</span><br/>
-      <a href="https://cpudapp.bangkok.go.th/bmatraffic/" target="_blank" rel="noopener noreferrer">เปิดวิดีโอสด BMA Traffic ↗</a>
+      <span class="citizen-note">ลิงก์เปิดหน้า BMA Traffic ทั่วไป — ไม่ใช่กล้องนี้โดยตรง</span><br/>
+      <a href="https://cpudapp.bangkok.go.th/bmatraffic/" target="_blank" rel="noopener noreferrer">ดูกล้อง BMA ↗</a>
     `);
     camerasLayer.addLayer(marker);
   }
@@ -144,7 +144,7 @@ function renderMarkers() {
       ${escapeHtml(p.sublabel || "")}<br/>
       สถานะ: <b>${FD.STATUS_LABEL_TH[p.status]}</b> (${depthTxt})<br/>
       แหล่งข้อมูล: ${escapeHtml(p.source)} &middot; ${FD.timeAgoTh(p.updated)}${stale ? " &middot; <span class=\"stale-tag\">ข้อมูลเก่า</span>" : ""}
-      ${citizen ? '<p class="citizen-note">รายงานจากประชาชน (Traffy Fondue) — ไม่ยืนยันโดยเซ็นเซอร์</p>' : ""}
+      ${citizen ? '<p class="citizen-note">รายงานจากประชาชน — ไม่ยืนยันโดยเซ็นเซอร์</p>' : ""}
       ${(p.contributors || [p]).length <= 1 ? photoThumbHtml(p.photoUrl) : ""}
       ${contributorsHtml(p)}
       <br/><button class="popup-add-btn" data-key="${p.key}">เพิ่มเข้าเส้นทาง</button>
@@ -169,10 +169,10 @@ function renderRoadList(filterText) {
   if (filtered.length === 0) {
     listEl.innerHTML = `<p class="empty-hint">${
       allPoints.length === 0
-        ? "ไม่มีรายงานน้ำท่วมที่ยัง active อยู่ในขณะนี้"
+        ? "ไม่มีรายงานน้ำท่วมขณะนี้"
         : q
-        ? "ไม่พบถนนที่ตรงกับคำค้นหา"
-        : "ไม่มีรายงานภายในช่วงเวลาที่เลือก — ลองขยายตัวกรองความสดใหม่"
+        ? "ไม่พบถนนที่ค้นหา"
+        : "ไม่มีรายงานในช่วงเวลานี้ — ลองขยายตัวกรอง"
     }</p>`;
     return;
   }
@@ -255,16 +255,16 @@ function renderRoute() {
   const badge = `<span class="badge ${worst.status}">${FD.STATUS_BADGE[worst.status]}</span>`;
   if (worst.status === "red") {
     verdictEl.classList.add("blocked");
-    verdictEl.innerHTML = `${badge} ผ่านไม่ได้ — "${escapeHtml(worst.label)}" มีรายงานน้ำท่วมสูง แนะนำเลี่ยงเส้นทางนี้`;
+    verdictEl.innerHTML = `${badge} ผ่านไม่ได้ — "${escapeHtml(worst.label)}" น้ำท่วมสูง`;
   } else if (worst.status === "yellow" || worst.status === "gray") {
     verdictEl.classList.add("caution");
     verdictEl.innerHTML =
       worst.status === "yellow"
-        ? `${badge} ผ่านได้แต่ระวัง — "${escapeHtml(worst.label)}" มีน้ำท่วม ${worst.depthCm ?? "?"} ซม.`
-        : `${badge} ไม่ทราบระดับน้ำแน่ชัดที่ "${escapeHtml(worst.label)}" — โปรดระวัง`;
+        ? `${badge} ระวัง — "${escapeHtml(worst.label)}" น้ำท่วม ${worst.depthCm ?? "?"} ซม.`
+        : `${badge} ไม่ทราบระดับน้ำที่ "${escapeHtml(worst.label)}"`;
   } else {
     verdictEl.classList.add("ok");
-    verdictEl.innerHTML = `${badge} ผ่านได้ — ไม่มีรายงานน้ำท่วมสูงตามเส้นทางที่เลือก`;
+    verdictEl.innerHTML = `${badge} ผ่านได้ — ไม่มีรายงานน้ำท่วมรุนแรงในเส้นทางนี้`;
   }
 }
 
@@ -289,7 +289,7 @@ function hideLoadingOverlay() {
 }
 
 async function refreshAll() {
-  setStatusLine("กำลังอัปเดตข้อมูล…", false);
+  setStatusLine("กำลังอัปเดต…", false);
   const results = await Promise.allSettled([FD.loadBMA(), FD.loadLongdo(), FD.loadTraffy()]);
 
   const [bmaRes, longdoRes, traffyRes] = results;
@@ -316,9 +316,9 @@ async function refreshAll() {
   if (!lastFetchOk.traffy) failures.push("Traffy Fondue");
 
   if (failures.length === 0) {
-    setStatusLine(`อัปเดตล่าสุด ${now} · ${visiblePoints().length} จุดในช่วงเวลาที่เลือก (ทั้งหมด ${allPoints.length} จุด)`, false);
+    setStatusLine(`อัปเดต ${now} · ${visiblePoints().length}/${allPoints.length} จุด`, false);
   } else {
-    setStatusLine(`อัปเดต ${now} — โหลดข้อมูลจาก ${failures.join(", ")} ไม่สำเร็จ (แสดงเฉพาะข้อมูลที่โหลดได้)`, true);
+    setStatusLine(`อัปเดต ${now} — โหลด ${failures.join(", ")} ไม่สำเร็จ`, true);
   }
 }
 
