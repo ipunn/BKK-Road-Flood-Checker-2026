@@ -233,6 +233,27 @@ h1, h2 { margin: 0; }
 .dot.yellow { background: var(--stamp-amber); }
 .dot.red { background: var(--stamp-red); }
 .dot.gray { background: var(--stamp-gray); }
+/* Citizen report (Traffy Fondue), uncorroborated: dashed ring marks "not
+   sensor-confirmed" as a separate dimension from the status color itself
+   (kept, not overridden) — see CONTEXT.md "Citizen report". */
+.dot.citizen { border: 1px dashed var(--ink); }
+
+.citizen-note {
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  color: var(--ink-dim);
+  margin: 4px 0 0;
+}
+.corroboration-note {
+  font-family: var(--font-data);
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+  margin-top: 4px;
+}
+.corroboration-note ul {
+  margin: 2px 0 0;
+  padding-left: 16px;
+}
 
 .stale-tag {
   font-family: var(--font-data);

@@ -22,9 +22,11 @@ Department (TMD), and DDPM. BMA flood hotline: **1555**.
 |---|---|---|
 | [BMA road water-level sensors](https://floodbangkok.bangkok.go.th) | `.../floods/v1/items/sensor_profile` + `flood_notification` | ~254 fixed sensors across Bangkok roads, live depth in cm |
 | [Longdo Traffic / iTIC](https://traffic.longdo.com) event feed | `event.longdo.com/feed/json` | Flood reports aggregated from DOH, BMA Drainage & Sewerage Dept., and iTIC contributors — nationwide, filtered here to a Bangkok bounding box |
+| [Traffy Fondue](https://bangkok.traffy.in.th) citizen reports | `publicapi.traffy.in.th/teamchadchart-stat-api/geojson/v2` | BMA/NSTDA's official citizen issue-reporting channel, filtered to flood-tagged tickets. **Not sensor-confirmed** — capped at "caution" severity and merged with corroborating reports instead of shown standalone. This is an undocumented endpoint (see [ADR-0001](docs/adr/0001-traffy-fondue-undocumented-endpoint.md)); it can change or break without notice. |
 
-Both endpoints are public, unauthenticated, and send `Access-Control-Allow-Origin: *`,
-which is why this can run as a plain static page instead of needing a server-side proxy.
+All three endpoints are public and either send `Access-Control-Allow-Origin: *` (BMA,
+Longdo) or otherwise permit direct browser fetches (Traffy), which is why this can run
+as a plain static page instead of needing a server-side proxy.
 
 ## Passability classification
 

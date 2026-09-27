@@ -64,7 +64,11 @@ async function refresh() {
   const statusEl = document.getElementById("last-updated");
   statusEl.textContent = "กำลังอัปเดตข้อมูล…";
 
-  const [bmaRes, longdoRes] = await Promise.allSettled([FD.loadBMA(), FD.loadLongdo()]);
+  const [bmaRes, longdoRes, traffyRes] = await Promise.allSettled([
+    FD.loadBMA(),
+    FD.loadLongdo(),
+    FD.loadTraffy(),
+  ]);
 
   const cards = [];
   if (bmaRes.status === "fulfilled") {
@@ -97,10 +101,26 @@ async function refresh() {
     cards.push(renderCard("Longdo Traffic / iTIC event feed", false));
   }
 
+  if (traffyRes.status === "fulfilled") {
+    const { points, ticketCount, floodTicketCount } = traffyRes.value;
+    cards.push(
+      renderCard(
+        "Traffy Fondue (รายงานจากประชาชน)",
+        true,
+        {},
+        points,
+        `<p class="note">ตั๋วทั้งหมดในฟีด ${ticketCount} รายการ &middot; ประเภทน้ำท่วม ${floodTicketCount} รายการ &middot; ในเขตกรุงเทพฯ ที่ยัง active ${points.length} รายการ</p>
+         <p class="note citizen-note">แหล่งข้อมูลนี้เป็น endpoint ที่ไม่มีเอกสารทางการ (unofficial) ของ Traffy Fondue — อาจเปลี่ยนแปลงหรือหยุดทำงานได้โดยไม่แจ้งล่วงหน้า สถานะจะถูกจำกัดไว้ที่ระดับ "ผ่านได้แต่ระวัง" สูงสุด เนื่องจากเป็นรายงานจากประชาชนที่ยังไม่ผ่านการยืนยันจากเซ็นเซอร์</p>`
+      )
+    );
+  } else {
+    cards.push(renderCard("Traffy Fondue (รายงานจากประชาชน)", false));
+  }
+
   el.innerHTML = cards.join("");
 
   const now = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
-  const failed = [bmaRes, longdoRes].some((r) => r.status !== "fulfilled");
+  const failed = [bmaRes, longdoRes, traffyRes].some((r) => r.status !== "fulfilled");
   statusEl.textContent = failed ? `อัปเดต ${now} — มีแหล่งข้อมูลโหลดไม่สำเร็จ` : `อัปเดตล่าสุด ${now}`;
   statusEl.classList.toggle("warning", failed);
 }

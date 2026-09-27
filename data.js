@@ -1,14 +1,21 @@
 // Shared data-fetching, classification, and formatting logic.
 // Used by both index.html (map) and sources.html (data & freshness page).
 // Exposed as window.FloodData — plain script, no bundler/build step.
+// Also loadable under Node's test runner (no `window` there), hence globalThis.
 
 (function () {
+  const globalTarget = typeof window !== "undefined" ? window : globalThis;
   const BMA_API = "https://floodbangkok.bangkok.go.th/bkk/dds/services/api/floods/v1/items/";
   const LONGDO_EVENTS = "https://event.longdo.com/feed/json";
+  // Undocumented, unauthenticated endpoint behind the official public Traffy
+  // Fondue map (bangkok.traffy.in.th) — see docs/adr/0001 for why this is
+  // used instead of Traffy's documented, auth-gated Exchange API.
+  const TRAFFY_API = "https://publicapi.traffy.in.th/teamchadchart-stat-api/geojson/v2";
 
   const REFRESH_MS = 3 * 60 * 1000; // 3 min, matches BMA sensor refresh cadence
   const BMA_STALE_MS = 3 * 60 * 60 * 1000; // ignore BMA notifications older than 3h
   const LONGDO_FALLBACK_MS = 3 * 60 * 60 * 1000; // if a Longdo report has no "stop", expire after 3h
+  const TRAFFY_FALLBACK_MS = LONGDO_FALLBACK_MS; // same 3h closure fallback, reused per spec
   const STALE_WARN_MIN = 60; // flag a point as "stale" in the UI past this age
 
   // Depth thresholds (cm) for car passability — adjustable, transparent.
@@ -48,6 +55,12 @@
     }
     if (/เข่า|knee|สูง|shin/i.test(t)) return "yellow";
     return "gray";
+  }
+
+  // A Citizen report (Traffy Fondue) is a single unverified submission, so it
+  // can never independently produce a "blocked" verdict — see CONTEXT.md.
+  function capCitizenSeverity(status) {
+    return status === "red" ? "yellow" : status;
   }
 
   function ageMinutes(iso) {
@@ -151,10 +164,125 @@
     return { points, eventCount: events.length, floodEventCount };
   }
 
-  window.FloodData = {
+  async function loadTraffy() {
+    const geojson = await fetchJSON(TRAFFY_API);
+    const features = geojson.features || [];
+    const now = Date.now();
+    const points = [];
+    let floodTicketCount = 0;
+
+    for (const f of features) {
+      const props = f.properties || {};
+      const types = props.problem_type_fondue || (props.type ? [props.type] : []);
+      if (!types.includes("น้ำท่วม")) continue;
+      floodTicketCount++;
+
+      const coords = f.geometry && f.geometry.coordinates;
+      if (!coords) continue;
+      const [lng, lat] = coords; // GeoJSON order — swapped to this app's {lat, lng}
+      if (isNaN(lat) || isNaN(lng) || !inBangkok(lat, lng)) continue;
+
+      // Status can be reverted (per research), so closure never trusts it
+      // alone — see CONTEXT.md "Citizen report" and docs/adr/0001.
+      const resolved = /เสร็จสิ้น|ไม่เกี่ยวข้อง|finish/i.test(
+        `${props.state || ""} ${props.state_type_latest || ""}`
+      );
+      const ts = props.timestamp ? props.timestamp.replace(" ", "T") : null;
+      const age = ts ? now - new Date(ts).getTime() : Infinity;
+      const expired = age > TRAFFY_FALLBACK_MS;
+      if (resolved || expired) continue;
+
+      const text = `${props.description || ""} ${props.address || ""}`;
+      const depthCm = parseDepthCm(text);
+
+      points.push({
+        key: `traffy-${props.ticket_id || f.id}`,
+        label: props.address || props.subdistrict || "รายงานจากประชาชน",
+        sublabel: `${props.subdistrict || ""} ${props.district || ""}`.trim(),
+        status: capCitizenSeverity(classify(depthCm, text)),
+        depthCm,
+        updated: ts,
+        source: "Traffy Fondue",
+        lat,
+        lng,
+        text,
+      });
+    }
+
+    return { points, ticketCount: features.length, floodTicketCount };
+  }
+
+  const MERGE_DISTANCE_M = 300; // corroboration radius — see CONTEXT.md "Corroboration"
+
+  // Haversine distance in meters between two lat/lng pairs.
+  function distanceMeters(lat1, lng1, lat2, lng2) {
+    const R = 6371000;
+    const toRad = (d) => (d * Math.PI) / 180;
+    const dLat = toRad(lat2 - lat1);
+    const dLng = toRad(lng2 - lng1);
+    const a =
+      Math.sin(dLat / 2) ** 2 +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(a));
+  }
+
+  // Points within MERGE_DISTANCE_M of each other, both still within the
+  // existing freshness window, refer to the same real-world flood point —
+  // merge them into one marker (see CONTEXT.md "Corroboration") instead of
+  // showing duplicate pins. Union-find so a chain of nearby points (a-b-c)
+  // merges transitively even if a and c themselves are far apart.
+  function mergeCorroboration(points) {
+    const parent = points.map((_, i) => i);
+    function find(i) {
+      while (parent[i] !== i) {
+        parent[i] = parent[parent[i]];
+        i = parent[i];
+      }
+      return i;
+    }
+    function union(i, j) {
+      const ri = find(i);
+      const rj = find(j);
+      if (ri !== rj) parent[ri] = rj;
+    }
+
+    for (let i = 0; i < points.length; i++) {
+      if (points[i].lat == null || points[i].lng == null) continue;
+      if (ageMinutes(points[i].updated) > STALE_WARN_MIN) continue;
+      for (let j = i + 1; j < points.length; j++) {
+        if (points[j].lat == null || points[j].lng == null) continue;
+        if (ageMinutes(points[j].updated) > STALE_WARN_MIN) continue;
+        const dist = distanceMeters(points[i].lat, points[i].lng, points[j].lat, points[j].lng);
+        if (dist <= MERGE_DISTANCE_M) union(i, j);
+      }
+    }
+
+    const clusters = new Map();
+    points.forEach((p, i) => {
+      const root = find(i);
+      if (!clusters.has(root)) clusters.set(root, []);
+      clusters.get(root).push(p);
+    });
+
+    return [...clusters.values()].map((group) => {
+      if (group.length === 1) return { ...group[0], contributors: [group[0]] };
+      const worst = group.reduce((a, b) => (STATUS_RANK[b.status] > STATUS_RANK[a.status] ? b : a));
+      const newest = group.reduce((a, b) => (ageMinutes(b.updated) < ageMinutes(a.updated) ? b : a));
+      return {
+        ...worst,
+        key: group.map((p) => p.key).join("+"),
+        updated: newest.updated,
+        source: [...new Set(group.map((p) => p.source))].join(", "),
+        contributors: group,
+      };
+    });
+  }
+
+  globalTarget.FloodData = {
     REFRESH_MS,
     BMA_STALE_MS,
     LONGDO_FALLBACK_MS,
+    TRAFFY_FALLBACK_MS,
     STALE_WARN_MIN,
     THRESH_YELLOW,
     THRESH_RED,
@@ -162,10 +290,13 @@
     STATUS_LABEL_TH,
     STATUS_BADGE,
     classify,
+    capCitizenSeverity,
+    mergeCorroboration,
     parseDepthCm,
     ageMinutes,
     timeAgoTh,
     loadBMA,
     loadLongdo,
+    loadTraffy,
   };
 })();
