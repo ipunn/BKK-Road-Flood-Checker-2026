@@ -44,8 +44,13 @@ function initMap() {
 // number of stations whose thresholds run backwards). See CONTEXT.md
 // "Water-level status" and docs/adr/0005-canal-water-level-status.md for why
 // this supersedes the earlier single-color-only decision.
+// Sized to match the road-status marker footprint (circleMarker radius 5-8,
+// i.e. ~10-16px diameter) rather than dominate it — 256 canal stations
+// heavily outnumber the handful of road reports typically on screen, so
+// keeping the icon small is what keeps Passability status the primary
+// visual layer. See CONTEXT.md "Water-level status".
 const CANAL_WAVE_SVG =
-  '<svg viewBox="0 0 24 24" width="22" height="22">' +
+  '<svg viewBox="0 0 24 24" width="14" height="14">' +
   '<circle class="canal-wave-bg" cx="12" cy="12" r="10"/>' +
   '<path class="canal-wave-glyph" d="M4 13c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/>' +
   "</svg>";
@@ -54,8 +59,8 @@ function canalStationIcon(waterLevelStatus) {
   return L.divIcon({
     className: `canal-wave-icon status-${waterLevelStatus || "neutral"}`,
     html: CANAL_WAVE_SVG,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11],
+    iconSize: [14, 14],
+    iconAnchor: [7, 7],
   });
 }
 
@@ -68,6 +73,12 @@ function renderCanalMarkers() {
   canalMarkersByKey.clear();
   for (const s of canalStations) {
     if (s.lat == null || s.lng == null || isNaN(s.lat) || isNaN(s.lng)) continue;
+    // Most of the ~256 stations read "green" (normal) at any given time —
+    // showing all of them buries the handful worth a driver's attention
+    // under a wall of markers that say "nothing to see here." A green
+    // station is still fetched/available (e.g. for a future station-search
+    // feature), just not drawn on the map by default.
+    if (s.waterLevelStatus === "green") continue;
     const marker = L.marker([s.lat, s.lng], { icon: canalStationIcon(s.waterLevelStatus) });
     marker.bindPopup(`
       <b>${escapeHtml(s.label)}</b><br/>

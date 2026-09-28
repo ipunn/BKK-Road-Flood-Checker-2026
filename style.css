@@ -337,6 +337,7 @@ h1, h2 { margin: 0; }
 .canal-legend-wave.status-green .canal-wave-bg { fill: var(--canal-status-green); }
 .canal-legend-wave.status-yellow .canal-wave-bg { fill: var(--canal-status-yellow); }
 .canal-legend-wave.status-red .canal-wave-bg { fill: var(--canal-status-red); }
+.canal-legend-note { font-style: italic; opacity: 0.75; }
 
 /* Canal station marker (Leaflet divIcon) — a wave glyph, never the plain
    circleMarker dot used for road-status/camera points, so it can't be
