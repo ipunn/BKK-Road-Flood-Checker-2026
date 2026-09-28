@@ -343,8 +343,10 @@ h1, h2 { margin: 0; }
   padding: 6px 4px;
   border-bottom: 1px solid var(--board-line);
   font-size: 0.8rem;
+  cursor: pointer;
 }
 .station-item:last-child { border-bottom: none; }
+.station-item:hover { background: var(--board-panel); }
 .station-item .name {
   flex: 1;
   overflow: hidden;

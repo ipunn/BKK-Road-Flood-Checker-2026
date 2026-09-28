@@ -6,6 +6,7 @@ const FD = window.FloodData;
 
 let map, markersLayer, camerasLayer, canalMarkersLayer;
 let markersByKey = new Map();
+let canalMarkersByKey = new Map();
 let allPoints = []; // every currently-active point, before the freshness filter
 let canalStations = []; // ThaiWater canal water-level Related conditions — never a report, see CONTEXT.md
 const RELATED_CONDITIONS_LIMIT = 5;
@@ -49,6 +50,7 @@ const CANAL_MARKER_COLOR = "#4d7a91"; // matches --canal-blue in style.css; Leaf
 // currently shown or not) always reflects the latest fetch.
 function renderCanalMarkers() {
   canalMarkersLayer.clearLayers();
+  canalMarkersByKey.clear();
   for (const s of canalStations) {
     if (s.lat == null || s.lng == null || isNaN(s.lat) || isNaN(s.lng)) continue;
     const marker = L.circleMarker([s.lat, s.lng], {
@@ -64,7 +66,27 @@ function renderCanalMarkers() {
       <span class="related-conditions-note">ข้อมูลบริบท ไม่ใช่รายงานสภาพถนน</span>
     `);
     canalMarkersLayer.addLayer(marker);
+    canalMarkersByKey.set(s.key, marker);
   }
+}
+
+// Clicking a station in the sidebar's Related-conditions list flies to it —
+// same UX as flyToPoint() for road-list items. Turns the canal marker layer
+// on first if it's currently hidden (toggle off by default), since flying to
+// a pin the user can't see would be confusing; keeps #canal-toggle's own
+// pressed/active state in sync so the button doesn't lie about layer state.
+function flyToCanalStation(key) {
+  const s = canalStations.find((x) => x.key === key);
+  if (!s || s.lat == null || s.lng == null || isNaN(s.lat) || isNaN(s.lng)) return;
+  const canalToggle = document.getElementById("canal-toggle");
+  if (canalToggle.getAttribute("aria-pressed") !== "true") {
+    canalMarkersLayer.addTo(map);
+    canalToggle.setAttribute("aria-pressed", "true");
+    canalToggle.classList.add("active");
+  }
+  map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
+  const marker = canalMarkersByKey.get(key);
+  if (marker) marker.openPopup();
 }
 
 // Camera pins are a static snapshot (docs/adr/0002), fetched once — not part
@@ -159,13 +181,16 @@ function renderRelatedConditions() {
   el.innerHTML = nearest
     .map(
       (s) => `
-      <div class="station-item">
+      <div class="station-item" data-key="${s.key}" title="คลิกเพื่อไปยังตำแหน่งบนแผนที่">
         <span class="name">${escapeHtml(s.label)}</span>
         <span class="level">${s.levelM.toFixed(2)} ม.</span>
         <span class="age">${FD.timeAgoTh(s.updated)}</span>
       </div>`
     )
     .join("");
+  el.querySelectorAll(".station-item").forEach((row) => {
+    row.addEventListener("click", () => flyToCanalStation(row.dataset.key));
+  });
 }
 
 function flyToPoint(key) {

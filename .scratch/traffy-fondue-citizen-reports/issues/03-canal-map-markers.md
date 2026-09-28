@@ -66,3 +66,15 @@ color-coded severity scale, both originally requested).
   `mergeCorroboration()`, and can't be added to a route — same
   restrictions as camera pins, consistent with `CONTEXT.md`'s "Related
   condition" definition.
+
+## Comments
+
+- Follow-up request: "can we add feature that when click คลอง the map
+  navigate / position to the selected คลอง" — clicking a row in the
+  sidebar's Related-conditions list now flies the map to that station
+  (`flyToCanalStation()`, `app.js`), same UX as clicking a road-list item
+  (`flyToPoint()`). If the canal marker layer is currently toggled off, the
+  click also turns it on (via `#canal-toggle`) so there's actually a pin to
+  fly to and open a popup on — flying to an invisible marker would be
+  confusing. `.station-item` rows got `cursor: pointer` and a hover state
+  in `style.css` to signal they're clickable.
