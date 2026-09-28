@@ -109,9 +109,21 @@
   // an unparseable date as a valid, very-far-future timestamp instead of
   // "no date at all". Normalized to null here so every such check behaves
   // the same as a genuinely missing field.
+  //
+  // BMA's feed carries full ISO 8601 with an explicit `Z` (UTC). Longdo/iTIC
+  // and Traffy Fondue instead send a naive "YYYY-MM-DD HH:MM:SS" with no
+  // timezone marker at all — confirmed live to be Bangkok local time
+  // (UTC+7), not UTC. `new Date()` parses a marker-less date-time string as
+  // local time in whatever timezone the *viewing device* is set to, not
+  // Bangkok time — silently wrong (and wrong by exactly that device's UTC
+  // offset) for any viewer not set to Asia/Bangkok. `+07:00` is appended
+  // only when no zone marker is already present, so BMA's `Z` strings are
+  // untouched.
   function parseDateMs(s) {
     if (!s) return null;
-    const ms = new Date(String(s).replace(" ", "T")).getTime();
+    let str = String(s).replace(" ", "T");
+    if (!/[Zz]|[+-]\d\d:?\d\d$/.test(str)) str += "+07:00";
+    const ms = new Date(str).getTime();
     return Number.isNaN(ms) ? null : ms;
   }
 
@@ -277,7 +289,8 @@
         `${props.state || ""} ${props.state_type_latest || ""}`
       );
       const ts = props.timestamp ? props.timestamp.replace(" ", "T") : null;
-      const age = ts ? now - new Date(ts).getTime() : Infinity;
+      const tsMs = parseDateMs(props.timestamp);
+      const age = tsMs != null ? now - tsMs : Infinity;
       const expired = age > TRAFFY_FALLBACK_MS;
       if (resolved || expired) continue;
 

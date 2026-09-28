@@ -15,6 +15,36 @@ test("capCitizenSeverity leaves yellow, green, and gray unchanged", () => {
   assert.equal(FD.capCitizenSeverity("gray"), "gray");
 });
 
+test("ageMinutes treats a naive Longdo/Traffy timestamp as Bangkok time (UTC+7), not the runtime's local timezone", () => {
+  // "2026-09-28 09:31:47" Bangkok local == "2026-09-28T02:31:47.000Z" UTC.
+  // Before the fix, `new Date()` on the naive string would parse it as
+  // local-to-the-test-runner time instead — wrong by the runner's own UTC
+  // offset. Comparing against a fixed, explicit UTC instant makes this
+  // assertion correct regardless of what timezone `node --test` runs in.
+  const now = new Date("2026-09-28T02:33:47.000Z").getTime();
+  const naive = "2026-09-28 09:31:47"; // Bangkok local, no zone marker
+  const realInstant = new Date("2026-09-28T02:31:47.000Z").getTime();
+
+  const originalNow = Date.now;
+  Date.now = () => now;
+  try {
+    assert.equal(Math.round(FD.ageMinutes(naive)), Math.round((now - realInstant) / 60000));
+  } finally {
+    Date.now = originalNow;
+  }
+});
+
+test("ageMinutes leaves an already-zoned timestamp (BMA's ISO8601 + Z) untouched", () => {
+  const now = new Date("2026-09-28T02:33:47.000Z").getTime();
+  const originalNow = Date.now;
+  Date.now = () => now;
+  try {
+    assert.equal(Math.round(FD.ageMinutes("2026-09-28T02:20:00.000Z")), 14);
+  } finally {
+    Date.now = originalNow;
+  }
+});
+
 function point(overrides) {
   return {
     key: "p",

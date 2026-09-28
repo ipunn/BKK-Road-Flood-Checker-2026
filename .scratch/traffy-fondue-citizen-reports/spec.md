@@ -1,4 +1,4 @@
-Status: ready-for-agent
+Status: done
 
 # Add Traffy Fondue as a Citizen report source
 
