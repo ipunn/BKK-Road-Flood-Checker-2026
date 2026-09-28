@@ -4,7 +4,7 @@
 
 const FD = window.FloodData;
 
-let map, markersLayer, camerasLayer;
+let map, markersLayer, camerasLayer, canalMarkersLayer;
 let markersByKey = new Map();
 let allPoints = []; // every currently-active point, before the freshness filter
 let canalStations = []; // ThaiWater canal water-level Related conditions — never a report, see CONTEXT.md
@@ -12,6 +12,15 @@ const RELATED_CONDITIONS_LIMIT = 5;
 let selectedKeys = new Set();
 let maxAgeMinutes = 180; // freshness filter — only show points reported within this window
 let lastFetchOk = { bma: false, longdo: false, traffy: false, thaiwater: false };
+// ThaiWater's canal-level feed measured ~10x slower than Longdo/Traffy and on
+// par with or slower than BMA (see .scratch/traffy-fondue-citizen-reports/
+// issues/02-decouple-thaiwater-initial-load.md) — since it's a Related
+// condition that never affects a road's passability (CONTEXT.md), it's
+// fetched independently of the three report sources so its latency can't
+// hold up the loading overlay or first map paint. This flag distinguishes
+// "hasn't finished its first fetch yet" from "fetched and failed", so the
+// panel doesn't flash a false failure message while still loading.
+let thaiwaterEverSettled = false;
 
 function initMap() {
   map = L.map("map", { zoomControl: true }).setView([13.7563, 100.5018], 11);
@@ -22,6 +31,40 @@ function initMap() {
   }).addTo(map);
   markersLayer = L.layerGroup().addTo(map);
   camerasLayer = L.layerGroup(); // not added to map — off by default, see CONTEXT.md "Camera pin"
+  canalMarkersLayer = L.layerGroup(); // not added to map — off by default, same pattern as camerasLayer
+}
+
+// ThaiWater canal stations get a single neutral color, never a red/yellow/
+// green/gray Passability color — the feed has no cross-station-comparable
+// severity signal (measureValue is relative to each station's own local
+// datum, not a shared reference; storagePercent ranges from -402% to +188%
+// live, clearly not a clean 0-100% scale), so color-coding by level would
+// invent a severity judgment the data can't actually support. See
+// .scratch/traffy-fondue-citizen-reports/issues/03-canal-map-markers.md.
+const CANAL_MARKER_COLOR = "#4d7a91"; // matches --canal-blue in style.css; Leaflet's SVG renderer sets this as a raw attribute, not via CSS, so var() won't resolve here
+
+// Canal stations are a Related condition, not a report (CONTEXT.md) — no
+// Passability status, not merged, not selectable into a route, same as
+// camera pins. Rebuilt on every ThaiWater refresh so the layer (whether
+// currently shown or not) always reflects the latest fetch.
+function renderCanalMarkers() {
+  canalMarkersLayer.clearLayers();
+  for (const s of canalStations) {
+    if (s.lat == null || s.lng == null || isNaN(s.lat) || isNaN(s.lng)) continue;
+    const marker = L.circleMarker([s.lat, s.lng], {
+      radius: 4,
+      color: "#ffffff",
+      weight: 1,
+      fillColor: CANAL_MARKER_COLOR,
+      fillOpacity: 0.85,
+    });
+    marker.bindPopup(`
+      <b>${escapeHtml(s.label)}</b><br/>
+      ${s.levelM.toFixed(2)} ม. &middot; ${FD.timeAgoTh(s.updated)}<br/>
+      <span class="related-conditions-note">ข้อมูลบริบท ไม่ใช่รายงานสภาพถนน</span>
+    `);
+    canalMarkersLayer.addLayer(marker);
+  }
 }
 
 // Camera pins are a static snapshot (docs/adr/0002), fetched once — not part
@@ -103,9 +146,12 @@ function getReferenceLatLng() {
 function renderRelatedConditions() {
   const el = document.getElementById("related-conditions-list");
   if (canalStations.length === 0) {
-    el.innerHTML = `<p class="empty-hint">${
-      lastFetchOk.thaiwater ? "ไม่มีข้อมูลระดับน้ำคลองขณะนี้" : "โหลดข้อมูลระดับน้ำคลองไม่สำเร็จ"
-    }</p>`;
+    const msg = !thaiwaterEverSettled
+      ? "กำลังโหลดข้อมูลระดับน้ำคลอง…"
+      : lastFetchOk.thaiwater
+      ? "ไม่มีข้อมูลระดับน้ำคลองขณะนี้"
+      : "โหลดข้อมูลระดับน้ำคลองไม่สำเร็จ";
+    el.innerHTML = `<p class="empty-hint">${msg}</p>`;
     return;
   }
   const { lat, lng } = getReferenceLatLng();
@@ -365,20 +411,39 @@ function hideLoadingOverlay() {
   overlay.addEventListener("transitionend", () => { overlay.hidden = true; }, { once: true });
 }
 
-async function refreshAll() {
+// Composes the single status line from whichever sources have reported in so
+// far. Called independently by refreshReports() and refreshThaiWater() since
+// they no longer await each other — see thaiwaterEverSettled's comment.
+function updateStatusLine() {
+  const now = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  const failures = [];
+  if (!lastFetchOk.bma) failures.push("BMA");
+  if (!lastFetchOk.longdo) failures.push("Longdo/iTIC");
+  if (!lastFetchOk.traffy) failures.push("Traffy Fondue");
+  if (thaiwaterEverSettled && !lastFetchOk.thaiwater) failures.push("ThaiWater");
+
+  if (failures.length === 0) {
+    setStatusLine(`อัปเดต ${now} · ${visiblePoints().length}/${allPoints.length} จุด`, false);
+  } else {
+    setStatusLine(`อัปเดต ${now} — โหลด ${failures.join(", ")} ไม่สำเร็จ`, true);
+  }
+}
+
+// The three actual road-report sources — merged and rendered to the
+// map/road-list/route as soon as they're all in. Gates the loading overlay:
+// see thaiwaterEverSettled's comment for why ThaiWater is deliberately not
+// one of these three.
+async function refreshReports() {
   setStatusLine("กำลังอัปเดต…", false);
-  const results = await Promise.allSettled([
+  const [bmaRes, longdoRes, traffyRes] = await Promise.allSettled([
     FD.loadBMA(),
     FD.loadLongdo(),
     FD.loadTraffy(),
-    FD.loadThaiWaterCanal(),
   ]);
 
-  const [bmaRes, longdoRes, traffyRes, thaiwaterRes] = results;
   lastFetchOk.bma = bmaRes.status === "fulfilled";
   lastFetchOk.longdo = longdoRes.status === "fulfilled";
   lastFetchOk.traffy = traffyRes.status === "fulfilled";
-  lastFetchOk.thaiwater = thaiwaterRes.status === "fulfilled";
 
   const rawPoints = [
     ...(lastFetchOk.bma ? bmaRes.value.points : []),
@@ -386,26 +451,32 @@ async function refreshAll() {
     ...(lastFetchOk.traffy ? traffyRes.value.points : []),
   ];
   allPoints = FD.mergeCorroboration(rawPoints);
-  canalStations = lastFetchOk.thaiwater ? thaiwaterRes.value.stations : [];
 
   renderMarkers();
   renderRoadList(document.getElementById("road-search").value);
   renderRoute();
-  renderRelatedConditions();
   hideLoadingOverlay(); // no-op after the first successful cycle — see its own comment
 
-  const now = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
-  const failures = [];
-  if (!lastFetchOk.bma) failures.push("BMA");
-  if (!lastFetchOk.longdo) failures.push("Longdo/iTIC");
-  if (!lastFetchOk.traffy) failures.push("Traffy Fondue");
-  if (!lastFetchOk.thaiwater) failures.push("ThaiWater");
+  updateStatusLine();
+}
 
-  if (failures.length === 0) {
-    setStatusLine(`อัปเดต ${now} · ${visiblePoints().length}/${allPoints.length} จุด`, false);
-  } else {
-    setStatusLine(`อัปเดต ${now} — โหลด ${failures.join(", ")} ไม่สำเร็จ`, true);
-  }
+// ThaiWater's Related-conditions panel — fetched on its own cadence,
+// independent of the report sources above, so its latency never delays first
+// map paint. See thaiwaterEverSettled's comment.
+async function refreshThaiWater() {
+  const [thaiwaterRes] = await Promise.allSettled([FD.loadThaiWaterCanal()]);
+  lastFetchOk.thaiwater = thaiwaterRes.status === "fulfilled";
+  thaiwaterEverSettled = true;
+  canalStations = lastFetchOk.thaiwater ? thaiwaterRes.value.stations : [];
+
+  renderRelatedConditions();
+  renderCanalMarkers();
+  updateStatusLine();
+}
+
+function refreshAll() {
+  refreshReports();
+  refreshThaiWater();
 }
 
 function main() {
@@ -451,6 +522,24 @@ function main() {
     cameraToggle.setAttribute("aria-pressed", String(!showing));
     cameraToggle.classList.toggle("active", !showing);
   });
+
+  // Canal markers are already kept up to date by refreshThaiWater() on the
+  // normal refresh cycle regardless of toggle state (the sidebar's Related
+  // conditions panel needs the data either way) — this toggle only controls
+  // the map layer's visibility, unlike camera pins which are a one-time
+  // fetch triggered by the toggle itself.
+  const canalToggle = document.getElementById("canal-toggle");
+  canalToggle.addEventListener("click", () => {
+    const showing = canalToggle.getAttribute("aria-pressed") === "true";
+    if (showing) {
+      map.removeLayer(canalMarkersLayer);
+    } else {
+      canalMarkersLayer.addTo(map);
+    }
+    canalToggle.setAttribute("aria-pressed", String(!showing));
+    canalToggle.classList.toggle("active", !showing);
+  });
+
   refreshAll();
   setInterval(refreshAll, FD.REFRESH_MS);
 }

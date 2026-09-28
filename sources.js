@@ -139,7 +139,7 @@ async function refresh() {
         {},
         points,
         `<p class="note">ตั๋วในฟีด ${ticketCount} รายการ &middot; น้ำท่วม ${floodTicketCount} รายการ &middot; active ${points.length} รายการ</p>
-         <p class="note citizen-note">Endpoint ไม่เป็นทางการ อาจเปลี่ยนแปลงได้ — จำกัดสถานะสูงสุดที่ "ระวัง" เพราะยังไม่ยืนยันโดยเซ็นเซอร์</p>`
+         <p class="note citizen-note">Endpoint ไม่เป็นทางการ อาจเปลี่ยนแปลงได้ — จำกัดสถานะสูงสุดที่ "ระวัง" เพราะยังไม่ยืนยันโดยเซ็นเซอร์ — <strong>ใช้ภาพถ่ายจริงจากผู้แจ้งบน Traffy</strong> เมื่อมีแนบมากับตั๋ว</p>`
       )
     );
   } else {

@@ -8,6 +8,7 @@
   --ink: #d8d2c2;
   --ink-dim: #8f867a;
   --brass: #b8863b;
+  --canal-blue: #4d7a91; /* neutral marker for ThaiWater canal stations — deliberately not a red/yellow/green/gray status color, see CONTEXT.md "Related condition" */
 
   --stamp-red: #d9614a; /* tuned from #c2493c for AA text contrast (4.84:1) on --board */
   --stamp-amber: #d69a3f;
