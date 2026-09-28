@@ -57,6 +57,8 @@ is never a `mergeCorroboration` contributor. Exists to give drivers *some*
 signal when report coverage is missing (most notably during a BMA outage),
 not to replace a report. Shown unconditionally alongside reports, not gated
 behind or specially promoted during a source outage — it's additive context,
-not an outage fallback UI.
+not an outage fallback UI. The first instance, ThaiWater canal water-level
+stations (`data.js` `loadThaiWaterCanal`), relies on an undocumented public
+fallback API key — see ADR-0004.
 _Avoid_: Leading indicator, upstream data (both used informally during
 sourcing research; this is the canonical term going forward)

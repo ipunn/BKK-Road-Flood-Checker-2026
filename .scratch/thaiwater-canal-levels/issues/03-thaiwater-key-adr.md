@@ -11,16 +11,16 @@ ThaiWater changes or revokes that fallback key.
 found while building `loadThaiWaterCanal()`, not a guess made before
 implementation)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `docs/adr/0004-thaiwater-public-key.md` created, following the same
+- [x] `docs/adr/0004-thaiwater-public-key.md` created, following the same
       structure/tone as ADR-0001 and ADR-0002.
-- [ ] States what the fallback key is, where it comes from, and why it was
+- [x] States what the fallback key is, where it comes from, and why it was
       used instead of registering a dedicated key.
-- [ ] States the risk: what happens to the feature if ThaiWater rotates or
+- [x] States the risk: what happens to the feature if ThaiWater rotates or
       removes the fallback key, and how that failure would present (same
       independent-degradation behavior as any other source failure, per
       ticket 01).
-- [ ] Cross-referenced from `CONTEXT.md`'s "Related condition" entry the
+- [x] Cross-referenced from `CONTEXT.md`'s "Related condition" entry the
       same way ADR-0001 and ADR-0002 are already referenced from their
       relevant `CONTEXT.md` terms.

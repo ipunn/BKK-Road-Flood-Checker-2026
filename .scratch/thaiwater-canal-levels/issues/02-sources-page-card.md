@@ -8,19 +8,28 @@ key rather than a registered key of our own.
 
 **Blocked by:** 01 (needs `loadThaiWaterCanal()` to exist)
 
-**Status:** ready-for-agent
+**Status:** done
 
-- [ ] `sources.js`'s `refresh()` adds `FD.loadThaiWaterCanal()` to its
+- [x] `sources.js`'s `refresh()` adds `FD.loadThaiWaterCanal()` to its
       existing `Promise.allSettled` call alongside BMA/Longdo/Traffy.
-- [ ] A fourth card is rendered via `renderCard` (or a variant of it),
-      following the exact pattern of the existing three cards — station
-      count and freshness-style stats appropriate to a station reading
-      rather than a report (no red/yellow/green/gray Passability breakdown,
-      since stations carry no Passability status).
-- [ ] The card includes a caveat note (mirroring Traffy's `citizen-note`)
+- [x] A fourth card is rendered via a new `renderStationCard` variant of
+      `renderCard` — station count and freshness-style stats appropriate to
+      a station reading rather than a report (no red/yellow/green/gray
+      Passability breakdown, since stations carry no Passability status).
+- [x] The card includes a caveat note (mirroring Traffy's `citizen-note`)
       that this feed uses ThaiWater's public undocumented fallback API key,
       not a registered key of our own.
-- [ ] A ThaiWater fetch failure renders the same error-card state the other
+- [x] A ThaiWater fetch failure renders the same error-card state the other
       three sources already use, and is included in the page's overall
       "some source failed to load" status line.
-- [ ] No change to the existing BMA/Longdo/Traffy cards' rendering or logic.
+- [x] No change to the existing BMA/Longdo/Traffy cards' rendering or logic.
+
+## Comments
+
+`renderCard` couldn't be reused as-is since it assumes a report's
+red/yellow/green/gray Passability breakdown, which stations don't have — a
+sibling function `renderStationCard` was added instead, following the same
+markup/CSS classes (`source-card`, `source-stats`, `citizen-note`, etc.) so
+it's visually consistent with the other three cards. Not visually verified in
+a live browser this session — no Claude in Chrome extension connection was
+available. Worth a manual look before considering this fully done.

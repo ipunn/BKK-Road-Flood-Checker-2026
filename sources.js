@@ -9,17 +9,22 @@ function escapeHtml(s) {
   }[c]));
 }
 
-function summarize(points) {
-  const counts = { red: 0, yellow: 0, green: 0, gray: 0 };
+function minMaxAge(items) {
   let newest = null;
   let oldest = null;
-  for (const p of points) {
-    counts[p.status]++;
-    const age = FD.ageMinutes(p.updated);
+  for (const item of items) {
+    const age = FD.ageMinutes(item.updated);
     if (age === Infinity) continue;
     if (newest === null || age < newest) newest = age;
     if (oldest === null || age > oldest) oldest = age;
   }
+  return { newest, oldest };
+}
+
+function summarize(points) {
+  const counts = { red: 0, yellow: 0, green: 0, gray: 0 };
+  for (const p of points) counts[p.status]++;
+  const { newest, oldest } = minMaxAge(points);
   return { counts, newest, oldest };
 }
 
@@ -59,15 +64,39 @@ function renderCard(name, ok, meta, points, extraRows) {
     </div>`;
 }
 
+function renderStationCard(name, ok, stations, extraRows) {
+  const { newest, oldest } = ok ? minMaxAge(stations) : { newest: null, oldest: null };
+  return `
+    <div class="source-card ${ok ? "" : "error"}">
+      <div class="source-card-head">
+        <span class="source-name">${escapeHtml(name)}</span>
+        <span class="badge ${ok ? "green" : "red"}">${ok ? "ONLINE" : "โหลดไม่สำเร็จ"}</span>
+      </div>
+      ${
+        ok
+          ? `
+      <div class="source-stats">
+        <div><span class="stat-num">${stations.length}</span><span class="stat-label">สถานี</span></div>
+        <div><span class="stat-num">${fmtAge(newest)}</span><span class="stat-label">ค่าล่าสุด</span></div>
+        <div><span class="stat-num">${fmtAge(oldest)}</span><span class="stat-label">ค่าเก่าสุด</span></div>
+      </div>
+      ${extraRows || ""}
+      `
+          : `<p class="empty-hint">ไม่สามารถโหลดข้อมูลจากแหล่งนี้ได้ในขณะนี้ — ลองรีเฟรชอีกครั้ง</p>`
+      }
+    </div>`;
+}
+
 async function refresh() {
   const el = document.getElementById("source-cards");
   const statusEl = document.getElementById("last-updated");
   statusEl.textContent = "กำลังอัปเดตข้อมูล…";
 
-  const [bmaRes, longdoRes, traffyRes] = await Promise.allSettled([
+  const [bmaRes, longdoRes, traffyRes, thaiwaterRes] = await Promise.allSettled([
     FD.loadBMA(),
     FD.loadLongdo(),
     FD.loadTraffy(),
+    FD.loadThaiWaterCanal(),
   ]);
 
   const cards = [];
@@ -117,10 +146,24 @@ async function refresh() {
     cards.push(renderCard("Traffy Fondue (รายงานจากประชาชน)", false));
   }
 
+  if (thaiwaterRes.status === "fulfilled") {
+    const { stations } = thaiwaterRes.value;
+    cards.push(
+      renderStationCard(
+        "ThaiWater ระดับน้ำคลอง",
+        true,
+        stations,
+        `<p class="note related-conditions-note">ใช้ public fallback API key ของ ThaiWater ไม่ใช่ key ที่ลงทะเบียนของเราเอง อาจหยุดทำงานได้หาก ThaiWater เปลี่ยนหรือยกเลิก key นี้</p>`
+      )
+    );
+  } else {
+    cards.push(renderStationCard("ThaiWater ระดับน้ำคลอง", false));
+  }
+
   el.innerHTML = cards.join("");
 
   const now = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
-  const failed = [bmaRes, longdoRes, traffyRes].some((r) => r.status !== "fulfilled");
+  const failed = [bmaRes, longdoRes, traffyRes, thaiwaterRes].some((r) => r.status !== "fulfilled");
   statusEl.textContent = failed ? `อัปเดต ${now} — มีแหล่งข้อมูลโหลดไม่สำเร็จ` : `อัปเดตล่าสุด ${now}`;
   statusEl.classList.toggle("warning", failed);
 }
