@@ -11,6 +11,14 @@
   // Fondue map (bangkok.traffy.in.th) — see docs/adr/0001 for why this is
   // used instead of Traffy's documented, auth-gated Exchange API.
   const TRAFFY_API = "https://publicapi.traffy.in.th/teamchadchart-stat-api/geojson/v2";
+  // ThaiWater TWA's own map UI's canal-water-level GeoJSON endpoint — unpaginated,
+  // grouped by basin. Requires the "x-api-key" header below: ThaiWater's official
+  // JS bundle falls back to this exact public key whenever no signed-in user
+  // token is present, so it's the same undocumented-but-public category as the
+  // Traffy endpoint above. See CONTEXT.md "Related condition" and (once written)
+  // docs/adr/0004 for the trade-off.
+  const THAIWATER_CANAL_API = "https://twa-api-public.thaiwater.net/v2/waterlevel/canal";
+  const THAIWATER_API_KEY = "TPSXrHRvTHeVT2Lygq6YeTqqAm4xZ72x";
   // Traffy attaches this exact stock "ศูนย์กทม. 1555" call-center logo as
   // photo_url on tickets forwarded without an actual citizen photo — not a
   // real per-report image. Confirmed live: ~56% of tickets share this one
@@ -122,8 +130,8 @@
     return `${hrs} ชม.ที่แล้ว`;
   }
 
-  async function fetchJSON(url) {
-    const res = await fetch(url, { headers: { Accept: "application/json" } });
+  async function fetchJSON(url, extraHeaders) {
+    const res = await fetch(url, { headers: { Accept: "application/json", ...extraHeaders } });
     if (!res.ok) throw new Error(`${url} -> HTTP ${res.status}`);
     return res.json();
   }
@@ -294,6 +302,47 @@
     return { points, ticketCount: features.length, floodTicketCount };
   }
 
+  // ThaiWater's canal-water-level response is a GeoJSON FeatureCollection per
+  // basin id — flattened here across every basin rather than hardcoding the
+  // Chao Phraya basin id, since a station right at Bangkok's edge could be
+  // grouped under a neighboring basin. inBangkok() below is what actually
+  // scopes the result to Bangkok, same as loadLongdo()/loadTraffy().
+  // A station is deliberately NOT report-shaped (no `status`, `depthCm`, or
+  // report-shaped `source`) — see CONTEXT.md "Related condition".
+  function parseCanalStations(raw) {
+    const basins = (raw && raw.data) || {};
+    const stations = [];
+    for (const basinId of Object.keys(basins)) {
+      const features = (basins[basinId] && basins[basinId].features) || [];
+      for (const f of features) {
+        const coords = f.geometry && f.geometry.coordinates;
+        if (!coords) continue;
+        const [lng, lat] = coords; // GeoJSON order — swapped to this app's {lat, lng}
+        const props = f.properties || {};
+        const levelM = props.measureValue;
+        if (isNaN(lat) || isNaN(lng) || !inBangkok(lat, lng)) continue;
+        if (typeof levelM !== "number" || isNaN(levelM)) continue;
+
+        const st = props.station || {};
+        stations.push({
+          key: `thaiwater-canal-${st.id}`,
+          label: st.station || "สถานีวัดระดับน้ำคลอง",
+          lat,
+          lng,
+          levelM,
+          updated: props.measureAt || null,
+        });
+      }
+    }
+    return stations;
+  }
+
+  async function loadThaiWaterCanal() {
+    const raw = await fetchJSON(THAIWATER_CANAL_API, { "x-api-key": THAIWATER_API_KEY });
+    const stations = parseCanalStations(raw);
+    return { stations, stationCount: stations.length };
+  }
+
   const MERGE_DISTANCE_M = 300; // corroboration radius — see CONTEXT.md "Corroboration"
 
   // Haversine distance in meters between two lat/lng pairs.
@@ -366,6 +415,17 @@
     });
   }
 
+  // Sorts by distance (reusing the same haversine helper mergeCorroboration
+  // uses) and returns the closest `limit` stations — see CONTEXT.md "Related
+  // condition" for why this never affects Passability status or route verdicts.
+  function nearestStations(stations, lat, lng, limit) {
+    return stations
+      .map((s) => ({ station: s, dist: distanceMeters(lat, lng, s.lat, s.lng) }))
+      .sort((a, b) => a.dist - b.dist)
+      .slice(0, limit)
+      .map((s) => s.station);
+  }
+
   globalTarget.FloodData = {
     REFRESH_MS,
     BMA_STALE_MS,
@@ -380,11 +440,15 @@
     classify,
     capCitizenSeverity,
     mergeCorroboration,
+    distanceMeters,
     parseDepthCm,
     ageMinutes,
     timeAgoTh,
     loadBMA,
     loadLongdo,
     loadTraffy,
+    parseCanalStations,
+    loadThaiWaterCanal,
+    nearestStations,
   };
 })();

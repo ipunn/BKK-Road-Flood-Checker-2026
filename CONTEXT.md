@@ -48,3 +48,15 @@ The clear / caution / blocked / unknown verdict assigned to a single report or
 to a selected route (the worst status among its reports). Carried by ink color
 and stamp shape in the UI, per `DESIGN.md`.
 _Avoid_: Severity, risk level
+
+**Related condition**:
+Upstream/contextual data (e.g. dam levels, canal discharge, rainfall) shown
+for awareness only — never a Sensor report, Event report, or Citizen report.
+It carries no Passability status, is never an input to a route verdict, and
+is never a `mergeCorroboration` contributor. Exists to give drivers *some*
+signal when report coverage is missing (most notably during a BMA outage),
+not to replace a report. Shown unconditionally alongside reports, not gated
+behind or specially promoted during a source outage — it's additive context,
+not an outage fallback UI.
+_Avoid_: Leading indicator, upstream data (both used informally during
+sourcing research; this is the canonical term going forward)

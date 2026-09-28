@@ -7,9 +7,11 @@ const FD = window.FloodData;
 let map, markersLayer, camerasLayer;
 let markersByKey = new Map();
 let allPoints = []; // every currently-active point, before the freshness filter
+let canalStations = []; // ThaiWater canal water-level Related conditions — never a report, see CONTEXT.md
+const RELATED_CONDITIONS_LIMIT = 5;
 let selectedKeys = new Set();
 let maxAgeMinutes = 180; // freshness filter — only show points reported within this window
-let lastFetchOk = { bma: false, longdo: false, traffy: false };
+let lastFetchOk = { bma: false, longdo: false, traffy: false, thaiwater: false };
 
 function initMap() {
   map = L.map("map", { zoomControl: true }).setView([13.7563, 100.5018], 11);
@@ -74,6 +76,50 @@ function statusDotHtml(status, citizen, hasPhoto) {
 
 function visiblePoints() {
   return allPoints.filter((p) => FD.ageMinutes(p.updated) <= maxAgeMinutes);
+}
+
+// The point to measure "nearest" from: the currently searched road's
+// location when a search matches a visible report, otherwise the map's
+// current view center. Related conditions are always shown (see CONTEXT.md),
+// just re-sorted to whatever's most relevant right now.
+// Matches renderRoadList()'s own sort (worst status first) so the canal
+// panel centers on the same road the search results actually show on top,
+// not just whichever matching point happens to come first in allPoints.
+function getReferenceLatLng() {
+  const q = (document.getElementById("road-search").value || "").trim().toLowerCase();
+  if (q) {
+    const sorted = [...visiblePoints()].sort(
+      (a, b) => FD.STATUS_RANK[b.status] - FD.STATUS_RANK[a.status]
+    );
+    const match = sorted.find(
+      (p) => p.lat != null && p.lng != null && p.label.toLowerCase().includes(q)
+    );
+    if (match) return { lat: match.lat, lng: match.lng };
+  }
+  const center = map.getCenter();
+  return { lat: center.lat, lng: center.lng };
+}
+
+function renderRelatedConditions() {
+  const el = document.getElementById("related-conditions-list");
+  if (canalStations.length === 0) {
+    el.innerHTML = `<p class="empty-hint">${
+      lastFetchOk.thaiwater ? "ไม่มีข้อมูลระดับน้ำคลองขณะนี้" : "โหลดข้อมูลระดับน้ำคลองไม่สำเร็จ"
+    }</p>`;
+    return;
+  }
+  const { lat, lng } = getReferenceLatLng();
+  const nearest = FD.nearestStations(canalStations, lat, lng, RELATED_CONDITIONS_LIMIT);
+  el.innerHTML = nearest
+    .map(
+      (s) => `
+      <div class="station-item">
+        <span class="name">${escapeHtml(s.label)}</span>
+        <span class="level">${s.levelM.toFixed(2)} ม.</span>
+        <span class="age">${FD.timeAgoTh(s.updated)}</span>
+      </div>`
+    )
+    .join("");
 }
 
 function flyToPoint(key) {
@@ -321,12 +367,18 @@ function hideLoadingOverlay() {
 
 async function refreshAll() {
   setStatusLine("กำลังอัปเดต…", false);
-  const results = await Promise.allSettled([FD.loadBMA(), FD.loadLongdo(), FD.loadTraffy()]);
+  const results = await Promise.allSettled([
+    FD.loadBMA(),
+    FD.loadLongdo(),
+    FD.loadTraffy(),
+    FD.loadThaiWaterCanal(),
+  ]);
 
-  const [bmaRes, longdoRes, traffyRes] = results;
+  const [bmaRes, longdoRes, traffyRes, thaiwaterRes] = results;
   lastFetchOk.bma = bmaRes.status === "fulfilled";
   lastFetchOk.longdo = longdoRes.status === "fulfilled";
   lastFetchOk.traffy = traffyRes.status === "fulfilled";
+  lastFetchOk.thaiwater = thaiwaterRes.status === "fulfilled";
 
   const rawPoints = [
     ...(lastFetchOk.bma ? bmaRes.value.points : []),
@@ -334,10 +386,12 @@ async function refreshAll() {
     ...(lastFetchOk.traffy ? traffyRes.value.points : []),
   ];
   allPoints = FD.mergeCorroboration(rawPoints);
+  canalStations = lastFetchOk.thaiwater ? thaiwaterRes.value.stations : [];
 
   renderMarkers();
   renderRoadList(document.getElementById("road-search").value);
   renderRoute();
+  renderRelatedConditions();
   hideLoadingOverlay(); // no-op after the first successful cycle — see its own comment
 
   const now = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
@@ -345,6 +399,7 @@ async function refreshAll() {
   if (!lastFetchOk.bma) failures.push("BMA");
   if (!lastFetchOk.longdo) failures.push("Longdo/iTIC");
   if (!lastFetchOk.traffy) failures.push("Traffy Fondue");
+  if (!lastFetchOk.thaiwater) failures.push("ThaiWater");
 
   if (failures.length === 0) {
     setStatusLine(`อัปเดต ${now} · ${visiblePoints().length}/${allPoints.length} จุด`, false);
@@ -355,7 +410,11 @@ async function refreshAll() {
 
 function main() {
   initMap();
-  document.getElementById("road-search").addEventListener("input", (e) => renderRoadList(e.target.value));
+  map.on("moveend", renderRelatedConditions);
+  document.getElementById("road-search").addEventListener("input", (e) => {
+    renderRoadList(e.target.value);
+    renderRelatedConditions();
+  });
   document.getElementById("refresh-btn").addEventListener("click", refreshAll);
   document.getElementById("freshness-filter").addEventListener("change", (e) => {
     maxAgeMinutes = parseInt(e.target.value, 10);

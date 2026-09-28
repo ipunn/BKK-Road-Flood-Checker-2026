@@ -84,3 +84,97 @@ test("mergeCorroboration's merged marker takes the worst status among contributo
   assert.equal(merged.length, 1);
   assert.equal(merged[0].status, "red");
 });
+
+// --- ThaiWater canal water-level Related condition — see CONTEXT.md ---
+
+function canalFeature({
+  lng = 100.5018,
+  lat = 13.7563,
+  measureValue = 1.5,
+  stationId = 1,
+  stationName = "Test Canal",
+  measureAt = "2026-09-28T08:30:00+07:00",
+} = {}) {
+  return {
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [lng, lat] },
+    properties: {
+      id: "1",
+      measureAt,
+      measureValue,
+      station: { id: stationId, station: stationName },
+    },
+  };
+}
+
+function canalResponse(features) {
+  return { meta: {}, data: { "10": { type: "FeatureCollection", features } } };
+}
+
+test("parseCanalStations parses a well-formed feature", () => {
+  const stations = FD.parseCanalStations(canalResponse([canalFeature()]));
+  assert.equal(stations.length, 1);
+  assert.equal(stations[0].label, "Test Canal");
+  assert.equal(stations[0].lat, 13.7563);
+  assert.equal(stations[0].lng, 100.5018);
+  assert.equal(stations[0].levelM, 1.5);
+  assert.equal(stations[0].updated, "2026-09-28T08:30:00+07:00");
+});
+
+test("parseCanalStations drops a feature with a missing/non-numeric level", () => {
+  const stations = FD.parseCanalStations(canalResponse([canalFeature({ measureValue: null })]));
+  assert.equal(stations.length, 0);
+});
+
+test("parseCanalStations drops a feature with an out-of-Bangkok coordinate", () => {
+  // Chiang Mai coordinates — far outside Bangkok.
+  const stations = FD.parseCanalStations(canalResponse([canalFeature({ lat: 18.7883, lng: 98.9853 })]));
+  assert.equal(stations.length, 0);
+});
+
+test("parseCanalStations keeps valid features and drops invalid ones from a mixed response", () => {
+  const valid = canalFeature({ stationId: 1, stationName: "Valid" });
+  const badLevel = canalFeature({ stationId: 2, stationName: "Bad Level", measureValue: NaN });
+  const outside = canalFeature({ stationId: 3, stationName: "Outside", lat: 18.7883, lng: 98.9853 });
+  const stations = FD.parseCanalStations(canalResponse([valid, badLevel, outside]));
+  assert.equal(stations.length, 1);
+  assert.equal(stations[0].label, "Valid");
+});
+
+function station(overrides) {
+  return {
+    key: "s",
+    label: "Station",
+    lat: 13.7563,
+    lng: 100.5018,
+    levelM: 1,
+    updated: new Date().toISOString(),
+    ...overrides,
+  };
+}
+
+test("nearestStations returns the closest `limit` stations in distance order", () => {
+  const near = station({ key: "near", lat: 13.7568, lng: 100.5018 }); // ~55m
+  const mid = station({ key: "mid", lat: 13.7600, lng: 100.5018 }); // ~410m
+  const far = station({ key: "far", lat: 13.8000, lng: 100.5018 }); // ~4.8km
+
+  const result = FD.nearestStations([far, near, mid], 13.7563, 100.5018, 2);
+
+  assert.deepEqual(result.map((s) => s.key), ["near", "mid"]);
+});
+
+test("nearestStations returns all stations when there are fewer than `limit`", () => {
+  const a = station({ key: "a" });
+  const b = station({ key: "b", lat: 13.7568 });
+
+  const result = FD.nearestStations([a, b], 13.7563, 100.5018, 5);
+
+  assert.equal(result.length, 2);
+});
+
+test("nearestStations doesn't throw on equal-distance ties", () => {
+  const a = station({ key: "a", lat: 13.7568, lng: 100.5018 });
+  const b = station({ key: "b", lat: 13.7558, lng: 100.5018 });
+
+  assert.doesNotThrow(() => FD.nearestStations([a, b], 13.7563, 100.5018, 2));
+});
