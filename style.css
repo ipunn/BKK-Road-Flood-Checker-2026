@@ -737,4 +737,10 @@ h1, h2 { margin: 0; }
   #map { flex: 1; min-height: 0; }
   #topbar { flex-wrap: wrap; gap: 8px; }
   #topnav { order: 3; width: 100%; }
+  /* #status-line's nowrap (style above) is fine on desktop's wide single
+     row, but on a narrow phone screen a long status message (e.g. several
+     sources still loading, or several failing at once) has nowhere to wrap
+     to and runs off the edge of the screen instead. Let it wrap and take
+     its own full-width row here. */
+  #status-line { white-space: normal; order: 2; width: 100%; }
 }
