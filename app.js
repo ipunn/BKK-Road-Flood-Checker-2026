@@ -12,7 +12,7 @@ let allPoints = []; // every currently-active point, before the freshness filter
 let canalStations = []; // ThaiWater canal water-level Related conditions — never a report, see CONTEXT.md
 const RELATED_CONDITIONS_LIMIT = 5;
 let selectedKeys = new Set();
-let maxAgeMinutes = 180; // freshness filter — only show points reported within this window
+let maxAgeMinutes = 60; // freshness filter — only show points reported within this window
 let lastFetchOk = { bma: false, longdo: false, traffy: false, thaiwater: false };
 // ThaiWater's canal-level feed measured ~10x slower than Longdo/Traffy and on
 // par with or slower than BMA (see .scratch/traffy-fondue-citizen-reports/

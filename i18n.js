@@ -310,10 +310,9 @@
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === "th" || saved === "en") return saved;
     } catch (err) {
-      // localStorage unavailable (private mode, etc.) — fall through to detection
+      // localStorage unavailable (private mode, etc.) — fall through to default
     }
-    const nav = (typeof navigator !== "undefined" && (navigator.language || navigator.userLanguage)) || "th";
-    return String(nav).toLowerCase().startsWith("en") ? "en" : "th";
+    return "th"; // always defaults to Thai for a first-time visitor; EN is opt-in
   }
 
   function getLang() {
@@ -382,9 +381,15 @@
     });
   }
 
+  // A bare "EN"/"ไทย" reads as a status label, not a clickable control — the
+  // 🌐 glyph plus a title tooltip marks it as a language switcher at a
+  // glance, for a visitor who might otherwise not notice it.
   function updateToggleButton() {
     const btn = document.getElementById("lang-toggle");
-    if (btn) btn.textContent = getLang() === "th" ? "EN" : "ไทย";
+    if (!btn) return;
+    const lang = getLang();
+    btn.textContent = lang === "th" ? "🌐 EN" : "🌐 ไทย";
+    btn.title = lang === "th" ? "Switch to English" : "เปลี่ยนเป็นภาษาไทย";
   }
 
   function setLang(lang) {

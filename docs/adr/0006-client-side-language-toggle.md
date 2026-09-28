@@ -11,8 +11,13 @@ dictionary loaded by all three pages: static markup is tagged with
 `data-i18n="key"` attributes swapped on load/toggle, and `app.js`'s
 dynamically-generated strings call a small `t(key, vars)` helper instead of
 hardcoding Thai literals. The toggle itself is in-page (no reload, no
-`/en/`-style separate URLs), defaults from `navigator.language` on first visit,
-and persists the user's choice (including a manual override) in `localStorage`.
+`/en/`-style separate URLs), always defaults to Thai for a first-time visitor
+— English is a manual opt-in via the header toggle, not auto-detected from
+`navigator.language` — and persists the user's choice in `localStorage` after
+that. The toggle button itself carries a 🌐 glyph and a `title` tooltip
+("Switch to English"/"เปลี่ยนเป็นภาษาไทย") rather than showing only the bare
+target-language name, since a plain "EN"/"ไทย" label risks reading as a status
+indicator rather than a clickable control.
 
 Considered and rejected: duplicating each of the three HTML pages per language
 (`index.en.html`, etc.) — rejected because it lets the Thai and English copies

@@ -8,11 +8,8 @@ require("./data.js");
 require("./i18n.js");
 const I18n = globalThis.I18n;
 
-test("getLang returns a supported language without throwing", () => {
-  // Node's own `navigator.language` global (not this app's concern) decides
-  // the auto-detected default here — a real browser reflects the visitor's
-  // own setting instead. Only the detection logic not crashing is under test.
-  assert.ok(["th", "en"].includes(I18n.getLang()));
+test("getLang defaults to th with no saved preference — EN is opt-in, not auto-detected", () => {
+  assert.equal(I18n.getLang(), "th");
 });
 
 test("t returns the Thai string for a known key once set to th", () => {
