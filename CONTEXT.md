@@ -62,3 +62,20 @@ stations (`data.js` `loadThaiWaterCanal`), relies on an undocumented public
 fallback API key — see ADR-0004.
 _Avoid_: Leading indicator, upstream data (both used informally during
 sourcing research; this is the canonical term going forward)
+
+**Water-level status**:
+A derived red/yellow/green/neutral signal shown only on canal water-level
+stations (`data.js` `waterLevelStatus`), computed from a station's current
+reading against its own BMA-published warning/critical thresholds
+(`CANAL_STATION_THRESHOLDS`). A distinct concept from Passability status —
+it carries the same "never a route-verdict input, never a
+`mergeCorroboration` contributor" guarantees "Related condition" already
+makes, and uses a visually distinct color palette (`CANAL_STATUS_COLOR` /
+`--canal-status-*`) and marker shape (a wave `divIcon`, not a `circleMarker`)
+so it's never mistaken for a road-status dot. Neutral (no color) whenever a
+station has no sourced threshold — never defaults to green. See
+docs/adr/0005-canal-water-level-status.md for why this exists despite the
+earlier decision to never color-code canal stations.
+_Avoid_: Severity, risk level (reserved for Passability status, per that
+entry's own _Avoid_ note — using them here would blur the two systems this
+term exists to keep apart)

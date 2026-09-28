@@ -8,7 +8,14 @@
   --ink: #d8d2c2;
   --ink-dim: #8f867a;
   --brass: #b8863b;
-  --canal-blue: #4d7a91; /* neutral marker for ThaiWater canal stations — deliberately not a red/yellow/green/gray status color, see CONTEXT.md "Related condition" */
+  --canal-blue: #4d7a91; /* neutral fallback for a canal station with no sourced threshold, see CONTEXT.md "Water-level status" */
+  /* Water-level status palette — same red/yellow/green hue family as
+     MARKER_COLOR (app.js) since both are traffic-light severity scales, but
+     visibly duller/deeper shades so a canal marker is never color-identical
+     to a road-status dot at a glance. See CONTEXT.md "Water-level status". */
+  --canal-status-red: #a83a3a;
+  --canal-status-yellow: #9c7a2e;
+  --canal-status-green: #2f7a52;
 
   --stamp-red: #d9614a; /* tuned from #c2493c for AA text contrast (4.84:1) on --board */
   --stamp-amber: #d69a3f;
@@ -304,6 +311,47 @@ h1, h2 { margin: 0; }
 .dot.yellow { background: var(--stamp-amber); }
 .dot.red { background: var(--stamp-red); }
 .dot.gray { background: var(--stamp-gray); }
+/* Canal water-level legend — separate from the road-status .legend/.dot
+   above: a distinct icon shape (not a plain dot) so it reads as its own
+   system, not a 5th road-status color. See CONTEXT.md "Water-level status". */
+.canal-legend {
+  font-family: var(--font-data);
+  font-size: 0.68rem;
+  color: var(--ink-dim);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  margin-bottom: 10px;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--board-line);
+}
+.canal-legend-wave {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  vertical-align: middle;
+  margin-right: 3px;
+}
+.canal-legend-wave .canal-wave-bg { fill: var(--canal-blue); }
+.canal-legend-wave.status-green .canal-wave-bg { fill: var(--canal-status-green); }
+.canal-legend-wave.status-yellow .canal-wave-bg { fill: var(--canal-status-yellow); }
+.canal-legend-wave.status-red .canal-wave-bg { fill: var(--canal-status-red); }
+
+/* Canal station marker (Leaflet divIcon) — a wave glyph, never the plain
+   circleMarker dot used for road-status/camera points, so it can't be
+   mistaken for a Passability-status marker. See CONTEXT.md "Water-level
+   status" and app.js's renderCanalMarkers(). */
+.canal-wave-icon {
+  background: transparent;
+  border: none;
+}
+.canal-wave-icon .canal-wave-bg { fill: var(--canal-blue); stroke: #ffffff; stroke-width: 1; }
+.canal-wave-icon .canal-wave-glyph { fill: none; stroke: #ffffff; stroke-width: 1.6; stroke-linecap: round; }
+.canal-wave-icon.status-green .canal-wave-bg { fill: var(--canal-status-green); }
+.canal-wave-icon.status-yellow .canal-wave-bg { fill: var(--canal-status-yellow); }
+.canal-wave-icon.status-red .canal-wave-bg { fill: var(--canal-status-red); }
+
 /* Citizen report (Traffy Fondue), uncorroborated: dashed ring marks "not
    sensor-confirmed" as a separate dimension from the status color itself
    (kept, not overridden) — see CONTEXT.md "Citizen report". */

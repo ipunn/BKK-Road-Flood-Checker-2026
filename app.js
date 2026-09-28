@@ -35,14 +35,29 @@ function initMap() {
   canalMarkersLayer = L.layerGroup(); // not added to map — off by default, same pattern as camerasLayer
 }
 
-// ThaiWater canal stations get a single neutral color, never a red/yellow/
-// green/gray Passability color — the feed has no cross-station-comparable
-// severity signal (measureValue is relative to each station's own local
-// datum, not a shared reference; storagePercent ranges from -402% to +188%
-// live, clearly not a clean 0-100% scale), so color-coding by level would
-// invent a severity judgment the data can't actually support. See
-// .scratch/traffy-fondue-citizen-reports/issues/03-canal-map-markers.md.
-const CANAL_MARKER_COLOR = "#4d7a91"; // matches --canal-blue in style.css; Leaflet's SVG renderer sets this as a raw attribute, not via CSS, so var() won't resolve here
+// A wave glyph (never the plain circleMarker dot road/camera points use) so a
+// canal station can't be mistaken for a Passability-status or camera marker
+// at a glance. Its background color reflects `waterLevelStatus` (data.js) —
+// derived from real, BMA-sourced thresholds — falling back to this neutral
+// blue when no threshold is known for a station (CANAL_STATION_THRESHOLDS
+// doesn't cover every station, and never guesses a direction for the small
+// number of stations whose thresholds run backwards). See CONTEXT.md
+// "Water-level status" and docs/adr/0005-canal-water-level-status.md for why
+// this supersedes the earlier single-color-only decision.
+const CANAL_WAVE_SVG =
+  '<svg viewBox="0 0 24 24" width="22" height="22">' +
+  '<circle class="canal-wave-bg" cx="12" cy="12" r="10"/>' +
+  '<path class="canal-wave-glyph" d="M4 13c1.5-2 3-2 4.5 0s3 2 4.5 0 3-2 4.5 0 3 2 4.5 0"/>' +
+  "</svg>";
+
+function canalStationIcon(waterLevelStatus) {
+  return L.divIcon({
+    className: `canal-wave-icon status-${waterLevelStatus || "neutral"}`,
+    html: CANAL_WAVE_SVG,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
+  });
+}
 
 // Canal stations are a Related condition, not a report (CONTEXT.md) — no
 // Passability status, not merged, not selectable into a route, same as
@@ -53,13 +68,7 @@ function renderCanalMarkers() {
   canalMarkersByKey.clear();
   for (const s of canalStations) {
     if (s.lat == null || s.lng == null || isNaN(s.lat) || isNaN(s.lng)) continue;
-    const marker = L.circleMarker([s.lat, s.lng], {
-      radius: 4,
-      color: "#ffffff",
-      weight: 1,
-      fillColor: CANAL_MARKER_COLOR,
-      fillOpacity: 0.85,
-    });
+    const marker = L.marker([s.lat, s.lng], { icon: canalStationIcon(s.waterLevelStatus) });
     marker.bindPopup(`
       <b>${escapeHtml(s.label)}</b><br/>
       ${s.levelM.toFixed(2)} ม. &middot; ${FD.timeAgoTh(s.updated)}<br/>

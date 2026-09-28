@@ -171,6 +171,25 @@ test("parseCanalStations keeps valid features and drops invalid ones from a mixe
   assert.equal(stations[0].label, "Valid");
 });
 
+test("waterLevelStatus returns green when the level is below warningM", () => {
+  assert.equal(FD.waterLevelStatus(1.5, { warningM: 1.9, criticalM: 2.2 }), "green");
+});
+
+test("waterLevelStatus returns yellow when the level is at/above warningM but below criticalM", () => {
+  assert.equal(FD.waterLevelStatus(1.9, { warningM: 1.9, criticalM: 2.2 }), "yellow");
+  assert.equal(FD.waterLevelStatus(2.1, { warningM: 1.9, criticalM: 2.2 }), "yellow");
+});
+
+test("waterLevelStatus returns red when the level is at/above criticalM", () => {
+  assert.equal(FD.waterLevelStatus(2.2, { warningM: 1.9, criticalM: 2.2 }), "red");
+  assert.equal(FD.waterLevelStatus(3.0, { warningM: 1.9, criticalM: 2.2 }), "red");
+});
+
+test("waterLevelStatus returns null (never a guessed green) when no threshold is known", () => {
+  assert.equal(FD.waterLevelStatus(1.5, null), null);
+  assert.equal(FD.waterLevelStatus(1.5, undefined), null);
+});
+
 function station(overrides) {
   return {
     key: "s",
