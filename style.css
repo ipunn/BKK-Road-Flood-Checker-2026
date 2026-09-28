@@ -94,6 +94,21 @@ h1, h2 { margin: 0; }
 #topnav a:hover { color: var(--ink); }
 #topnav a.active { color: var(--paper); border-bottom-color: var(--brass); }
 
+.lang-toggle {
+  margin-left: auto;
+  background: none;
+  border: 1px solid var(--ink-dim);
+  border-radius: 3px;
+  color: var(--ink-dim);
+  font-family: var(--font-data);
+  font-size: 0.7rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 3px 8px;
+  cursor: pointer;
+}
+.lang-toggle:hover { color: var(--paper); border-color: var(--brass); }
+
 #status-line {
   display: flex;
   align-items: center;

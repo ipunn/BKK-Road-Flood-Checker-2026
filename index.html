@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>BKK Road Flood 2026 — เช็คน้ำท่วมถนนกรุงเทพฯ</title>
+<title data-i18n="doc.title.index">BKK Road Flood 2026 — เช็คน้ำท่วมถนนกรุงเทพฯ</title>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -17,17 +17,18 @@
       <h1>BKK Road Flood <span class="year">2026</span></h1>
     </div>
     <nav id="topnav">
-      <a href="index.html" class="active">แผนที่</a>
-      <a href="sources.html">แหล่งข้อมูล</a>
-      <a href="contact.html">ติดต่อ</a>
+      <a href="index.html" class="active" data-i18n="nav.map">แผนที่</a>
+      <a href="sources.html" data-i18n="nav.sources">แหล่งข้อมูล</a>
+      <a href="contact.html" data-i18n="nav.contact">ติดต่อ</a>
+      <button id="lang-toggle" class="lang-toggle" type="button" aria-label="Switch language">EN</button>
     </nav>
     <div id="status-line">
-      <span id="last-updated">กำลังโหลด…</span>
-      <button id="refresh-btn" title="โหลดข้อมูลใหม่">
+      <span id="last-updated" data-i18n="status.loading">กำลังโหลด…</span>
+      <button id="refresh-btn" data-i18n-title="refresh.title" title="โหลดข้อมูลใหม่">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
           <path fill="currentColor" d="M13.65 2.35a6.5 6.5 0 1 0 1.6 6.65h-1.55a5 5 0 1 1-1.14-5.14L10 6h5V1l-1.35 1.35z"/>
         </svg>
-        รีเฟรช
+        <span data-i18n="refresh.label">รีเฟรช</span>
       </button>
     </div>
   </header>
@@ -35,61 +36,61 @@
   <div id="app">
     <aside id="sidebar">
       <button id="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-panels">
-        <span>รายการถนน</span>
+        <span data-i18n="sidebar.roadlist">รายการถนน</span>
         <span class="sidebar-toggle-icon" aria-hidden="true">▾</span>
       </button>
       <div id="sidebar-panels">
       <div class="panel">
-        <h2>เส้นทางของฉัน</h2>
+        <h2 data-i18n="myroute.title">เส้นทางของฉัน</h2>
         <div id="route-list" class="route-list">
-          <p class="empty-hint">ยังไม่ได้เลือกถนน — คลิก "+" หรือคลิกหมุดบนแผนที่</p>
+          <p class="empty-hint" data-i18n="myroute.empty">ยังไม่ได้เลือกถนน — คลิก "+" หรือคลิกหมุดบนแผนที่</p>
         </div>
         <div id="route-verdict" class="verdict hidden"></div>
       </div>
 
       <div class="panel">
         <div class="panel-row">
-          <h2>ค้นหาถนน</h2>
-          <label class="freshness-label" for="freshness-filter">แสดงข้อมูลไม่เกิน
+          <h2 data-i18n="search.title">ค้นหาถนน</h2>
+          <label class="freshness-label" for="freshness-filter"><span data-i18n="freshness.label">แสดงข้อมูลไม่เกิน</span>
             <select id="freshness-filter">
-              <option value="15">15 นาที</option>
-              <option value="30">30 นาที</option>
-              <option value="60">1 ชั่วโมง</option>
-              <option value="180" selected>3 ชั่วโมง (ทั้งหมด)</option>
+              <option value="15" data-i18n="freshness.15">15 นาที</option>
+              <option value="30" data-i18n="freshness.30">30 นาที</option>
+              <option value="60" data-i18n="freshness.60">1 ชั่วโมง</option>
+              <option value="180" selected data-i18n="freshness.180">3 ชั่วโมง (ทั้งหมด)</option>
             </select>
           </label>
         </div>
-        <button id="camera-toggle" class="tab-button" type="button" aria-pressed="false">
+        <button id="camera-toggle" class="tab-button" type="button" aria-pressed="false" data-i18n="camera.toggle">
           กล้อง CCTV (BMA)
         </button>
-        <button id="canal-toggle" class="tab-button" type="button" aria-pressed="false">
+        <button id="canal-toggle" class="tab-button" type="button" aria-pressed="false" data-i18n="canal.toggle">
           ระดับน้ำคลอง (ThaiWater)
         </button>
-        <input id="road-search" type="text" placeholder="พิมพ์ชื่อถนน เช่น ลาดพร้าว, เอกชัย…" />
+        <input id="road-search" type="text" data-i18n-placeholder="road.search.placeholder" placeholder="พิมพ์ชื่อถนน เช่น ลาดพร้าว, เอกชัย…" />
         <div class="legend">
-          <span class="dot green"></span> ผ่านได้
-          <span class="dot yellow"></span> ผ่านได้แต่ระวัง
-          <span class="dot red"></span> ผ่านไม่ได้
-          <span class="dot gray"></span> ไม่ทราบระดับน้ำ
-          <span class="stale-tag">ข้อมูลเก่า</span> = รายงานเกิน 1 ชม.
+          <span class="dot green"></span> <span data-i18n="legend.clear">ผ่านได้</span>
+          <span class="dot yellow"></span> <span data-i18n="legend.caution">ผ่านได้แต่ระวัง</span>
+          <span class="dot red"></span> <span data-i18n="legend.blocked">ผ่านไม่ได้</span>
+          <span class="dot gray"></span> <span data-i18n="legend.unknown">ไม่ทราบระดับน้ำ</span>
+          <span class="stale-tag" data-i18n="legend.stale">ข้อมูลเก่า</span><span data-i18n="legend.stale.suffix"> = รายงานเกิน 1 ชม.</span>
         </div>
         <div class="canal-legend">
-          <svg class="canal-legend-wave status-yellow" viewBox="0 0 24 24"><circle class="canal-wave-bg" cx="12" cy="12" r="10"/></svg> เตือนภัย
-          <svg class="canal-legend-wave status-red" viewBox="0 0 24 24"><circle class="canal-wave-bg" cx="12" cy="12" r="10"/></svg> วิกฤติ
-          <svg class="canal-legend-wave" viewBox="0 0 24 24"><circle class="canal-wave-bg" cx="12" cy="12" r="10"/></svg> ไม่ทราบเกณฑ์
-          <span class="canal-legend-note">(สถานีระดับน้ำปกติไม่แสดงบนแผนที่)</span>
+          <svg class="canal-legend-wave status-yellow" viewBox="0 0 24 24"><circle class="canal-wave-bg" cx="12" cy="12" r="10"/></svg> <span data-i18n="canal.legend.warning">เตือนภัย</span>
+          <svg class="canal-legend-wave status-red" viewBox="0 0 24 24"><circle class="canal-wave-bg" cx="12" cy="12" r="10"/></svg> <span data-i18n="canal.legend.critical">วิกฤติ</span>
+          <svg class="canal-legend-wave" viewBox="0 0 24 24"><circle class="canal-wave-bg" cx="12" cy="12" r="10"/></svg> <span data-i18n="canal.legend.unknownthreshold">ไม่ทราบเกณฑ์</span>
+          <span class="canal-legend-note" data-i18n="canal.legend.note">(สถานีระดับน้ำปกติไม่แสดงบนแผนที่)</span>
         </div>
-        <div id="road-list" class="road-list"><p class="empty-hint">กำลังโหลด…</p></div>
+        <div id="road-list" class="road-list"><p class="empty-hint" data-i18n="status.loading">กำลังโหลด…</p></div>
       </div>
 
       <div class="panel">
-        <h2>ระดับน้ำคลองใกล้เคียง</h2>
-        <p class="related-conditions-note">ข้อมูลบริบท ไม่ใช่รายงานสภาพถนน — ใช้ประกอบการพิจารณาเท่านั้น</p>
-        <div id="related-conditions-list"><p class="empty-hint">กำลังโหลด…</p></div>
+        <h2 data-i18n="relatedcanal.title">ระดับน้ำคลองใกล้เคียง</h2>
+        <p class="related-conditions-note" data-i18n="relatedcanal.note">ข้อมูลบริบท ไม่ใช่รายงานสภาพถนน — ใช้ประกอบการพิจารณาเท่านั้น</p>
+        <div id="related-conditions-list"><p class="empty-hint" data-i18n="status.loading">กำลังโหลด…</p></div>
       </div>
 
       <div class="panel disclaimer">
-        <p><strong>ไม่ใช่ช่องทางทางการ</strong> — ติดตามประกาศจาก กทม., กรมอุตุฯ, ปภ. สายด่วน <strong>1555</strong> · <a href="sources.html">รายละเอียดแหล่งข้อมูล</a></p>
+        <p><strong data-i18n="disclaimer.notofficial">ไม่ใช่ช่องทางทางการ</strong><span data-i18n="disclaimer.follow"> — ติดตามประกาศจาก</span> <span data-i18n="disclaimer.agencies">กทม., กรมอุตุฯ, ปภ.</span> <span data-i18n="disclaimer.hotline">สายด่วน</span> <strong>1555</strong> · <a href="sources.html" data-i18n="disclaimer.sourcedetails">รายละเอียดแหล่งข้อมูล</a></p>
       </div>
       </div>
     </aside>
@@ -98,13 +99,14 @@
       <main id="map"></main>
       <div id="loading-overlay">
         <div class="spinner" aria-hidden="true"></div>
-        <p>กำลังโหลด…</p>
+        <p data-i18n="status.loading">กำลังโหลด…</p>
       </div>
     </div>
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
   <script src="data.js"></script>
+  <script src="i18n.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

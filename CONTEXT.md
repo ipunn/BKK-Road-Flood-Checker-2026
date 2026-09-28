@@ -79,3 +79,20 @@ earlier decision to never color-code canal stations.
 _Avoid_: Severity, risk level (reserved for Passability status, per that
 entry's own _Avoid_ note — using them here would blur the two systems this
 term exists to keep apart)
+
+**Translated string**:
+App-authored UI text (labels, headings, status messages, legend copy) that
+goes through the `i18n.js` dictionary and switches between Thai and English
+with the language toggle. Includes static markup (`data-i18n` attributes)
+and dynamic `app.js` template strings (via the `t()` helper). See
+docs/adr/0006-client-side-language-toggle.md.
+_Avoid_: Localized string, UI copy
+
+**Source-language content**:
+Text that names or is drawn verbatim from a live external feed or a real-world
+place — road/place names from the BMA, Longdo/iTIC, and Traffy Fondue feeds
+— and is deliberately never translated, even in English mode, because a
+driver needs it to match physical signage. Not a Translated string, even
+though both appear in the same UI. See
+docs/adr/0006-client-side-language-toggle.md.
+_Avoid_: Untranslated text (implies an oversight, not a deliberate choice)

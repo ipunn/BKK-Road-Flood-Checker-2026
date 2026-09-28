@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>ติดต่อ — BKK Road Flood 2026</title>
+<title data-i18n="doc.title.contact">ติดต่อ — BKK Road Flood 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -16,23 +16,26 @@
       <h1>BKK Road Flood <span class="year">2026</span></h1>
     </div>
     <nav id="topnav">
-      <a href="index.html">แผนที่</a>
-      <a href="sources.html">แหล่งข้อมูล</a>
-      <a href="contact.html" class="active">ติดต่อ</a>
+      <a href="index.html" data-i18n="nav.map">แผนที่</a>
+      <a href="sources.html" data-i18n="nav.sources">แหล่งข้อมูล</a>
+      <a href="contact.html" class="active" data-i18n="nav.contact">ติดต่อ</a>
+      <button id="lang-toggle" class="lang-toggle" type="button" aria-label="Switch language">EN</button>
     </nav>
   </header>
 
   <main id="sources-page">
     <section class="panel">
-      <h2>ผู้จัดทำ</h2>
+      <h2 data-i18n="contact.h.author">ผู้จัดทำ</h2>
       <p class="contact-name">Chayut Jungpanich</p>
       <p class="note">
         <a href="https://www.linkedin.com/in/chayut-jungpanich/" target="_blank" rel="noopener noreferrer">
           linkedin.com/in/chayut-jungpanich ↗
         </a>
       </p>
-      <p class="note">โปรเจกต์ส่วนตัว — ไม่ใช่ช่องทางทางการ · <a href="sources.html">แหล่งข้อมูล</a></p>
+      <p class="note"><span data-i18n="contact.note.personal">โปรเจกต์ส่วนตัว — ไม่ใช่ช่องทางทางการ</span> · <a href="sources.html" data-i18n="nav.sources">แหล่งข้อมูล</a></p>
     </section>
   </main>
+
+  <script src="i18n.js"></script>
 </body>
 </html>

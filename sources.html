@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>แหล่งข้อมูล — BKK Road Flood 2026</title>
+<title data-i18n="doc.title.sources">แหล่งข้อมูล — BKK Road Flood 2026</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -16,100 +16,102 @@
       <h1>BKK Road Flood <span class="year">2026</span></h1>
     </div>
     <nav id="topnav">
-      <a href="index.html">แผนที่</a>
-      <a href="sources.html" class="active">แหล่งข้อมูล</a>
-      <a href="contact.html">ติดต่อ</a>
+      <a href="index.html" data-i18n="nav.map">แผนที่</a>
+      <a href="sources.html" class="active" data-i18n="nav.sources">แหล่งข้อมูล</a>
+      <a href="contact.html" data-i18n="nav.contact">ติดต่อ</a>
+      <button id="lang-toggle" class="lang-toggle" type="button" aria-label="Switch language">EN</button>
     </nav>
     <div id="status-line">
-      <span id="last-updated">กำลังโหลด…</span>
-      <button id="refresh-btn" title="โหลดข้อมูลใหม่">
+      <span id="last-updated" data-i18n="status.loading">กำลังโหลด…</span>
+      <button id="refresh-btn" data-i18n-title="refresh.title" title="โหลดข้อมูลใหม่">
         <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
           <path fill="currentColor" d="M13.65 2.35a6.5 6.5 0 1 0 1.6 6.65h-1.55a5 5 0 1 1-1.14-5.14L10 6h5V1l-1.35 1.35z"/>
         </svg>
-        รีเฟรช
+        <span data-i18n="refresh.label">รีเฟรช</span>
       </button>
     </div>
   </header>
 
   <main id="sources-page">
     <section class="panel">
-      <h2>สถานะแหล่งข้อมูลตอนนี้</h2>
+      <h2 data-i18n="sources.h.status">สถานะแหล่งข้อมูลตอนนี้</h2>
       <div id="source-cards" class="source-cards">
-        <p class="empty-hint">กำลังโหลด…</p>
+        <p class="empty-hint" data-i18n="status.loading">กำลังโหลด…</p>
       </div>
     </section>
 
     <section class="panel">
-      <h2>แหล่งข้อมูล</h2>
+      <h2 data-i18n="sources.h.sources">แหล่งข้อมูล</h2>
       <table class="data-table">
         <thead>
-          <tr><th>แหล่งข้อมูล</th><th>Endpoint</th><th>ให้ข้อมูลอะไร</th><th>รอบอัปเดต</th></tr>
+          <tr><th data-i18n="table.source">แหล่งข้อมูล</th><th>Endpoint</th><th data-i18n="table.provides">ให้ข้อมูลอะไร</th><th data-i18n="table.updatecycle">รอบอัปเดต</th></tr>
         </thead>
         <tbody>
           <tr>
             <td>BMA road water-level sensors</td>
             <td><a href="https://floodbangkok.bangkok.go.th" target="_blank" rel="noopener">floodbangkok.bangkok.go.th</a></td>
-            <td>เซ็นเซอร์วัดระดับน้ำ ~254 จุด ค่าความลึกแบบสด</td>
-            <td>~3 นาที</td>
+            <td data-i18n="sources.row.bma.provides">เซ็นเซอร์วัดระดับน้ำ ~254 จุด ค่าความลึกแบบสด</td>
+            <td data-i18n="sources.row.bma.cycle">~3 นาที</td>
           </tr>
           <tr>
             <td>Longdo Traffic / iTIC event feed</td>
             <td><a href="https://traffic.longdo.com" target="_blank" rel="noopener">event.longdo.com/feed/json</a></td>
-            <td>รายงานจากกรมทางหลวง, สนน. กทม., ผู้ใช้ iTIC (กรองเฉพาะกรุงเทพฯ)</td>
-            <td>ตามเวลาจริง (ผู้รายงาน)</td>
+            <td data-i18n="sources.row.longdo.provides">รายงานจากกรมทางหลวง, สนน. กทม., ผู้ใช้ iTIC (กรองเฉพาะกรุงเทพฯ)</td>
+            <td data-i18n="sources.cycle.realtime">ตามเวลาจริง (ผู้รายงาน)</td>
           </tr>
           <tr>
-            <td>Traffy Fondue (รายงานจากประชาชน)</td>
+            <td data-i18n="sources.traffy.name">Traffy Fondue (รายงานจากประชาชน)</td>
             <td><a href="https://publicapi.traffy.in.th" target="_blank" rel="noopener">publicapi.traffy.in.th</a></td>
-            <td>รายงานจากประชาชน — ไม่ยืนยันโดยเซ็นเซอร์ จำกัดสถานะสูงสุดที่ระวัง <strong>รวมภาพถ่ายที่ผู้แจ้งแนบมากับตั๋วจริง</strong> ให้ดูประกอบด้วยตาตัวเองก่อนเชื่อสถานะ</td>
-            <td>ตามเวลาจริง (ผู้รายงาน)</td>
+            <td data-i18n-html="sources.row.traffy.provides.html">รายงานจากประชาชน — ไม่ยืนยันโดยเซ็นเซอร์ จำกัดสถานะสูงสุดที่ระวัง <strong>รวมภาพถ่ายที่ผู้แจ้งแนบมากับตั๋วจริง</strong> ให้ดูประกอบด้วยตาตัวเองก่อนเชื่อสถานะ</td>
+            <td data-i18n="sources.cycle.realtime">ตามเวลาจริง (ผู้รายงาน)</td>
           </tr>
           <tr>
-            <td>ThaiWater ระดับน้ำคลอง</td>
+            <td data-i18n="sources.thaiwater.name">ThaiWater ระดับน้ำคลอง</td>
             <td><a href="https://www.thaiwater.net" target="_blank" rel="noopener">twa-api-public.thaiwater.net</a></td>
-            <td>ระดับน้ำคลองใกล้พื้นที่แผนที่ — เป็นข้อมูลประกอบ (Related condition) เท่านั้น ไม่มีผลต่อสถานะผ่านได้/ผ่านไม่ได้ของถนนใด ๆ</td>
-            <td>ตามรอบของ ThaiWater</td>
+            <td data-i18n="sources.row.thaiwater.provides">ระดับน้ำคลองใกล้พื้นที่แผนที่ — เป็นข้อมูลประกอบ (Related condition) เท่านั้น ไม่มีผลต่อสถานะผ่านได้/ผ่านไม่ได้ของถนนใด ๆ</td>
+            <td data-i18n="sources.row.thaiwater.cycle">ตามรอบของ ThaiWater</td>
           </tr>
         </tbody>
       </table>
     </section>
 
     <section class="panel">
-      <h2>เกณฑ์การประเมินว่า "ผ่านได้หรือไม่"</h2>
+      <h2 data-i18n="sources.h.criteria">เกณฑ์การประเมินว่า "ผ่านได้หรือไม่"</h2>
       <table class="data-table">
-        <thead><tr><th>ระดับน้ำ</th><th>สถานะ</th><th>ความหมาย</th></tr></thead>
+        <thead><tr><th data-i18n="table.waterlevel">ระดับน้ำ</th><th data-i18n="table.status">สถานะ</th><th data-i18n="table.meaning">ความหมาย</th></tr></thead>
         <tbody>
-          <tr><td>&lt; 10 ซม. / รายงานว่าผ่านได้</td><td><span class="badge green">CLEAR</span></td><td>ผ่านได้</td></tr>
-          <tr><td>10–30 ซม.</td><td><span class="badge yellow">CAUTION</span></td><td>ผ่านได้แต่ระวัง / รถสูงเท่านั้น</td></tr>
-          <tr><td>&gt; 30 ซม. / รายงานว่าผ่านไม่ได้</td><td><span class="badge red">BLOCKED</span></td><td>ถือว่าผ่านไม่ได้</td></tr>
-          <tr><td>ไม่ระบุ</td><td><span class="badge gray">UNKNOWN</span></td><td>ไม่ทราบความลึก — ถือเป็นข้อควรระวัง ไม่ใช่ "ผ่านได้"</td></tr>
+          <tr><td data-i18n="sources.criteria.clear.range">&lt; 10 ซม. / รายงานว่าผ่านได้</td><td><span class="badge green">CLEAR</span></td><td data-i18n="legend.clear">ผ่านได้</td></tr>
+          <tr><td data-i18n="sources.criteria.caution.range">10–30 ซม.</td><td><span class="badge yellow">CAUTION</span></td><td data-i18n="sources.criteria.caution.meaning">ผ่านได้แต่ระวัง / รถสูงเท่านั้น</td></tr>
+          <tr><td data-i18n="sources.criteria.blocked.range">&gt; 30 ซม. / รายงานว่าผ่านไม่ได้</td><td><span class="badge red">BLOCKED</span></td><td data-i18n="sources.criteria.blocked.meaning">ถือว่าผ่านไม่ได้</td></tr>
+          <tr><td data-i18n="sources.criteria.unknown.range">ไม่ระบุ</td><td><span class="badge gray">UNKNOWN</span></td><td data-i18n="sources.criteria.unknown.meaning">ไม่ทราบความลึก — ถือเป็นข้อควรระวัง ไม่ใช่ "ผ่านได้"</td></tr>
         </tbody>
       </table>
-      <p class="note">รายงานที่ระบุคำตัดสินชัดเจน ("ผ่านได้" หรือ "ผ่านไม่ได้") จะยึดตามคำนั้นเสมอ ไม่ว่าตัวเลขความลึกในข้อความเดียวกันจะเป็นเท่าใด</p>
+      <p class="note" data-i18n-html="sources.criteria.note.html">รายงานที่ระบุคำตัดสินชัดเจน ("ผ่านได้" หรือ "ผ่านไม่ได้") จะยึดตามคำนั้นเสมอ ไม่ว่าตัวเลขความลึกในข้อความเดียวกันจะเป็นเท่าใด</p>
     </section>
 
     <section class="panel">
-      <h2>ความสดใหม่ของข้อมูล</h2>
+      <h2 data-i18n="sources.h.freshness">ความสดใหม่ของข้อมูล</h2>
       <ul class="bullet-list">
-        <li>แสดงเฉพาะรายงานที่ยัง <strong>active</strong> ขณะนี้เท่านั้น</li>
-        <li>ตัวกรอง "แสดงข้อมูลไม่เกิน" บนหน้าแผนที่ ปรับช่วงเวลาได้ (15 นาที–3 ชม.)</li>
-        <li>รายงานเกิน 60 นาทีจะมีป้าย <span class="stale-tag">ข้อมูลเก่า</span> กำกับเสมอ</li>
-        <li>โหลดข้อมูลไม่สำเร็จ ระบบแจ้งเตือนแทนการแสดงตัวเลขเก่า</li>
+        <li data-i18n-html="sources.freshness.li1.html">แสดงเฉพาะรายงานที่ยัง <strong>active</strong> ขณะนี้เท่านั้น</li>
+        <li data-i18n="sources.freshness.li2">ตัวกรอง "แสดงข้อมูลไม่เกิน" บนหน้าแผนที่ ปรับช่วงเวลาได้ (15 นาที–3 ชม.)</li>
+        <li data-i18n-html="sources.freshness.li3.html">รายงานเกิน 60 นาทีจะมีป้าย <span class="stale-tag">ข้อมูลเก่า</span> กำกับเสมอ</li>
+        <li data-i18n="sources.freshness.li4">โหลดข้อมูลไม่สำเร็จ ระบบแจ้งเตือนแทนการแสดงตัวเลขเก่า</li>
       </ul>
     </section>
 
     <section class="panel">
-      <h2>ข้อจำกัด</h2>
+      <h2 data-i18n="sources.h.limitations">ข้อจำกัด</h2>
       <ul class="bullet-list">
-        <li>ครอบคลุมเฉพาะจุดที่มีเซ็นเซอร์หรือมีผู้รายงาน — ซอยเล็กจำนวนมากอาจไม่มีข้อมูล</li>
-        <li>ไม่มีระบบนำทาง — ใช้ร่วมกับ Google Maps / Longdo Maps</li>
-        <li>เกณฑ์ความลึกเป็นการประมาณอย่างง่าย ไม่รวมกระแสน้ำหรือสิ่งกีดขวางใต้น้ำ</li>
+        <li data-i18n="sources.limitations.li1">ครอบคลุมเฉพาะจุดที่มีเซ็นเซอร์หรือมีผู้รายงาน — ซอยเล็กจำนวนมากอาจไม่มีข้อมูล</li>
+        <li data-i18n="sources.limitations.li2">ไม่มีระบบนำทาง — ใช้ร่วมกับ Google Maps / Longdo Maps</li>
+        <li data-i18n="sources.limitations.li3">เกณฑ์ความลึกเป็นการประมาณอย่างง่าย ไม่รวมกระแสน้ำหรือสิ่งกีดขวางใต้น้ำ</li>
       </ul>
-      <p class="note"><strong>ไม่ใช่ช่องทางทางการ</strong> — ติดตามประกาศจาก กทม., กรมอุตุฯ, ปภ. สายด่วน <strong>1555</strong></p>
+      <p class="note"><strong data-i18n="disclaimer.notofficial">ไม่ใช่ช่องทางทางการ</strong><span data-i18n="disclaimer.follow"> — ติดตามประกาศจาก</span> <span data-i18n="disclaimer.agencies">กทม., กรมอุตุฯ, ปภ.</span> <span data-i18n="disclaimer.hotline">สายด่วน</span> <strong>1555</strong></p>
     </section>
   </main>
 
   <script src="data.js"></script>
+  <script src="i18n.js"></script>
   <script src="sources.js"></script>
 </body>
 </html>

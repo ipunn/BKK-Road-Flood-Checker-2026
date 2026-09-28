@@ -327,12 +327,6 @@
   const THRESH_RED = 30; // >30cm: treat as impassable by car
 
   const STATUS_RANK = { red: 3, yellow: 2, gray: 1, green: 0 };
-  const STATUS_LABEL_TH = {
-    red: "ผ่านไม่ได้",
-    yellow: "ผ่านได้แต่ระวัง",
-    green: "ผ่านได้",
-    gray: "ไม่ทราบระดับน้ำ",
-  };
   const STATUS_BADGE = { red: "BLOCKED", yellow: "CAUTION", green: "CLEAR", gray: "UNKNOWN" };
 
   // The Longdo/iTIC feed is nationwide (it includes reports from other provinces, e.g.
@@ -411,15 +405,6 @@
     const ms = parseDateMs(iso);
     if (ms == null) return Infinity;
     return (Date.now() - ms) / 60000;
-  }
-
-  function timeAgoTh(iso) {
-    if (!iso) return "ไม่ทราบเวลา";
-    const mins = Math.round(ageMinutes(iso));
-    if (mins < 1) return "เมื่อสักครู่";
-    if (mins < 60) return `${mins} นาทีที่แล้ว`;
-    const hrs = Math.round(mins / 60);
-    return `${hrs} ชม.ที่แล้ว`;
   }
 
   async function fetchJSON(url, extraHeaders) {
@@ -744,7 +729,6 @@
     THRESH_YELLOW,
     THRESH_RED,
     STATUS_RANK,
-    STATUS_LABEL_TH,
     STATUS_BADGE,
     classify,
     capCitizenSeverity,
@@ -752,7 +736,6 @@
     distanceMeters,
     parseDepthCm,
     ageMinutes,
-    timeAgoTh,
     loadBMA,
     loadLongdo,
     loadTraffy,

@@ -2,6 +2,7 @@
 // same window.FloodData fetchers the map page uses.
 
 const FD = window.FloodData;
+const I18n = window.I18n;
 
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({
@@ -29,10 +30,7 @@ function summarize(points) {
 }
 
 function fmtAge(mins) {
-  if (mins == null) return "—";
-  if (mins < 1) return "เมื่อสักครู่";
-  if (mins < 60) return `${Math.round(mins)} นาที`;
-  return `${(mins / 60).toFixed(1)} ชม.`;
+  return I18n.fmtDuration(mins);
 }
 
 function renderCard(name, ok, meta, points, extraRows) {
@@ -41,15 +39,15 @@ function renderCard(name, ok, meta, points, extraRows) {
     <div class="source-card ${ok ? "" : "error"}">
       <div class="source-card-head">
         <span class="source-name">${escapeHtml(name)}</span>
-        <span class="badge ${ok ? "green" : "red"}">${ok ? "ONLINE" : "โหลดไม่สำเร็จ"}</span>
+        <span class="badge ${ok ? "green" : "red"}">${ok ? "ONLINE" : I18n.t("sources.badge.offline")}</span>
       </div>
       ${
         ok
           ? `
       <div class="source-stats">
-        <div><span class="stat-num">${points.length}</span><span class="stat-label">จุด active</span></div>
-        <div><span class="stat-num">${fmtAge(s.newest)}</span><span class="stat-label">รายงานล่าสุด</span></div>
-        <div><span class="stat-num">${fmtAge(s.oldest)}</span><span class="stat-label">รายงานเก่าสุดที่ยัง active</span></div>
+        <div><span class="stat-num">${points.length}</span><span class="stat-label">${I18n.t("sources.stat.activepoints")}</span></div>
+        <div><span class="stat-num">${fmtAge(s.newest)}</span><span class="stat-label">${I18n.t("sources.stat.latest")}</span></div>
+        <div><span class="stat-num">${fmtAge(s.oldest)}</span><span class="stat-label">${I18n.t("sources.stat.oldestactive")}</span></div>
       </div>
       <div class="source-breakdown">
         <span class="badge red">${s.counts.red}</span>
@@ -59,7 +57,7 @@ function renderCard(name, ok, meta, points, extraRows) {
       </div>
       ${extraRows || ""}
       `
-          : `<p class="empty-hint">ไม่สามารถโหลดข้อมูลจากแหล่งนี้ได้ในขณะนี้ — ลองรีเฟรชอีกครั้ง</p>`
+          : `<p class="empty-hint">${I18n.t("sources.card.error")}</p>`
       }
     </div>`;
 }
@@ -70,34 +68,34 @@ function renderStationCard(name, ok, stations, extraRows) {
     <div class="source-card ${ok ? "" : "error"}">
       <div class="source-card-head">
         <span class="source-name">${escapeHtml(name)}</span>
-        <span class="badge ${ok ? "green" : "red"}">${ok ? "ONLINE" : "โหลดไม่สำเร็จ"}</span>
+        <span class="badge ${ok ? "green" : "red"}">${ok ? "ONLINE" : I18n.t("sources.badge.offline")}</span>
       </div>
       ${
         ok
           ? `
       <div class="source-stats">
-        <div><span class="stat-num">${stations.length}</span><span class="stat-label">สถานี</span></div>
-        <div><span class="stat-num">${fmtAge(newest)}</span><span class="stat-label">ค่าล่าสุด</span></div>
-        <div><span class="stat-num">${fmtAge(oldest)}</span><span class="stat-label">ค่าเก่าสุด</span></div>
+        <div><span class="stat-num">${stations.length}</span><span class="stat-label">${I18n.t("sources.stat.stations")}</span></div>
+        <div><span class="stat-num">${fmtAge(newest)}</span><span class="stat-label">${I18n.t("sources.stat.latestvalue")}</span></div>
+        <div><span class="stat-num">${fmtAge(oldest)}</span><span class="stat-label">${I18n.t("sources.stat.oldestvalue")}</span></div>
       </div>
       ${extraRows || ""}
       `
-          : `<p class="empty-hint">ไม่สามารถโหลดข้อมูลจากแหล่งนี้ได้ในขณะนี้ — ลองรีเฟรชอีกครั้ง</p>`
+          : `<p class="empty-hint">${I18n.t("sources.card.error")}</p>`
       }
     </div>`;
 }
 
-async function refresh() {
+// The last-fetched Promise.allSettled results, kept so a language toggle can
+// re-render the same data in the new language (renderFromLastFetch) without
+// re-hitting the four live feeds — some unofficial/undocumented (see
+// docs/adr/0001, docs/adr/0004) — on every toggle click.
+let lastFetch = null;
+
+function renderFromLastFetch() {
+  if (!lastFetch) return;
+  const { bmaRes, longdoRes, traffyRes, thaiwaterRes } = lastFetch;
   const el = document.getElementById("source-cards");
   const statusEl = document.getElementById("last-updated");
-  statusEl.textContent = "กำลังอัปเดตข้อมูล…";
-
-  const [bmaRes, longdoRes, traffyRes, thaiwaterRes] = await Promise.allSettled([
-    FD.loadBMA(),
-    FD.loadLongdo(),
-    FD.loadTraffy(),
-    FD.loadThaiWaterCanal(),
-  ]);
 
   const cards = [];
   if (bmaRes.status === "fulfilled") {
@@ -108,7 +106,7 @@ async function refresh() {
         true,
         {},
         points,
-        `<p class="note">เซ็นเซอร์ ${sensorCount} จุด &middot; ${notificationCount} รายงานต่อรอบ</p>`
+        `<p class="note">${I18n.t("sources.bma.extra", { sensorCount, notificationCount })}</p>`
       )
     );
   } else {
@@ -123,7 +121,7 @@ async function refresh() {
         true,
         {},
         points,
-        `<p class="note">ฟีด ${eventCount} รายการ &middot; น้ำท่วม ${floodEventCount} รายการ (ทั้งประเทศ) &middot; active ในกรุงเทพฯ ${points.length} รายการ</p>`
+        `<p class="note">${I18n.t("sources.longdo.extra", { eventCount, floodEventCount, activeCount: points.length })}</p>`
       )
     );
   } else {
@@ -134,42 +132,57 @@ async function refresh() {
     const { points, ticketCount, floodTicketCount } = traffyRes.value;
     cards.push(
       renderCard(
-        "Traffy Fondue (รายงานจากประชาชน)",
+        I18n.t("sources.traffy.name"),
         true,
         {},
         points,
-        `<p class="note">ตั๋วในฟีด ${ticketCount} รายการ &middot; น้ำท่วม ${floodTicketCount} รายการ &middot; active ${points.length} รายการ</p>
-         <p class="note citizen-note">Endpoint ไม่เป็นทางการ อาจเปลี่ยนแปลงได้ — จำกัดสถานะสูงสุดที่ "ระวัง" เพราะยังไม่ยืนยันโดยเซ็นเซอร์ — <strong>ใช้ภาพถ่ายจริงจากผู้แจ้งบน Traffy</strong> เมื่อมีแนบมากับตั๋ว</p>`
+        `<p class="note">${I18n.t("sources.traffy.extra", { ticketCount, floodTicketCount, activeCount: points.length })}</p>
+         <p class="note citizen-note">${I18n.t("sources.traffy.note.html")}</p>`
       )
     );
   } else {
-    cards.push(renderCard("Traffy Fondue (รายงานจากประชาชน)", false));
+    cards.push(renderCard(I18n.t("sources.traffy.name"), false));
   }
 
   if (thaiwaterRes.status === "fulfilled") {
     const { stations } = thaiwaterRes.value;
     cards.push(
       renderStationCard(
-        "ThaiWater ระดับน้ำคลอง",
+        I18n.t("sources.thaiwater.name"),
         true,
         stations,
-        `<p class="note related-conditions-note">ใช้ public fallback API key ของ ThaiWater ไม่ใช่ key ที่ลงทะเบียนของเราเอง อาจหยุดทำงานได้หาก ThaiWater เปลี่ยนหรือยกเลิก key นี้</p>`
+        `<p class="note related-conditions-note">${I18n.t("sources.thaiwater.note")}</p>`
       )
     );
   } else {
-    cards.push(renderStationCard("ThaiWater ระดับน้ำคลอง", false));
+    cards.push(renderStationCard(I18n.t("sources.thaiwater.name"), false));
   }
 
   el.innerHTML = cards.join("");
 
-  const now = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  const now = I18n.fmtTime(lastFetch.fetchedAt);
   const failed = [bmaRes, longdoRes, traffyRes, thaiwaterRes].some((r) => r.status !== "fulfilled");
-  statusEl.textContent = failed ? `อัปเดต ${now} — มีแหล่งข้อมูลโหลดไม่สำเร็จ` : `อัปเดตล่าสุด ${now}`;
+  statusEl.textContent = failed ? I18n.t("sources.status.failed", { time: now }) : I18n.t("sources.status.updated", { time: now });
   statusEl.classList.toggle("warning", failed);
+}
+
+async function refresh() {
+  const statusEl = document.getElementById("last-updated");
+  statusEl.textContent = I18n.t("sources.status.updating");
+
+  const [bmaRes, longdoRes, traffyRes, thaiwaterRes] = await Promise.allSettled([
+    FD.loadBMA(),
+    FD.loadLongdo(),
+    FD.loadTraffy(),
+    FD.loadThaiWaterCanal(),
+  ]);
+  lastFetch = { bmaRes, longdoRes, traffyRes, thaiwaterRes, fetchedAt: new Date() };
+  renderFromLastFetch();
 }
 
 document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("refresh-btn").addEventListener("click", refresh);
+  document.addEventListener("i18n:change", renderFromLastFetch);
   refresh();
   setInterval(refresh, FD.REFRESH_MS);
 });

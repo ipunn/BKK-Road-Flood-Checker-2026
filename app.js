@@ -3,6 +3,7 @@
 // renders the map, sidebar, route picker, and freshness filter.
 
 const FD = window.FloodData;
+const I18n = window.I18n;
 
 let map, markersLayer, camerasLayer, canalMarkersLayer;
 let markersByKey = new Map();
@@ -82,8 +83,8 @@ function renderCanalMarkers() {
     const marker = L.marker([s.lat, s.lng], { icon: canalStationIcon(s.waterLevelStatus) });
     marker.bindPopup(`
       <b>${escapeHtml(s.label)}</b><br/>
-      ${s.levelM.toFixed(2)} ม. &middot; ${FD.timeAgoTh(s.updated)}<br/>
-      <span class="related-conditions-note">ข้อมูลบริบท ไม่ใช่รายงานสภาพถนน</span>
+      ${I18n.fmtMeters(s.levelM.toFixed(2))} &middot; ${I18n.timeAgo(s.updated)}<br/>
+      <span class="related-conditions-note">${I18n.t("canal.popup.note")}</span>
     `);
     canalMarkersLayer.addLayer(marker);
     canalMarkersByKey.set(s.key, marker);
@@ -131,12 +132,19 @@ async function loadCameraPins() {
       fillColor: "#b8863b", // matches --brass in style.css; Leaflet's SVG renderer sets this as a raw attribute, not via CSS, so var() won't resolve here
       fillOpacity: 0.9,
     });
-    marker.bindPopup(`
+    // A function, not a string: camera pins are loaded once and never
+    // re-rendered on a language toggle (unlike the report/canal markers,
+    // which are rebuilt from live data every 3 min anyway), so the popup
+    // content has to be resolved fresh on each open to pick up the current
+    // language instead of baking in whatever was active at load time.
+    marker.bindPopup(
+      () => `
       <b>${escapeHtml(cam.label)}</b>
       ${escapeHtml(cam.sublabel || "")}<br/>
-      <span class="citizen-note">ลิงก์เปิดหน้า BMA Traffic ทั่วไป — ไม่ใช่กล้องนี้โดยตรง</span><br/>
-      <a href="https://cpudapp.bangkok.go.th/bmatraffic/" target="_blank" rel="noopener noreferrer">ดูกล้อง BMA ↗</a>
-    `);
+      <span class="citizen-note">${I18n.t("camera.popup.note")}</span><br/>
+      <a href="https://cpudapp.bangkok.go.th/bmatraffic/" target="_blank" rel="noopener noreferrer">${I18n.t("camera.popup.link")}</a>
+    `
+    );
     camerasLayer.addLayer(marker);
   }
   return true;
@@ -155,7 +163,7 @@ function escapeHtml(s) {
 function statusDotHtml(status, citizen, hasPhoto) {
   return (
     `<span class="dot ${status}${citizen ? " citizen" : ""}"></span>` +
-    (hasPhoto ? `<span class="photo-cue" title="มีภาพประกอบ — ดูภาพเพื่อประเมินด้วยตนเอง">📷</span>` : "")
+    (hasPhoto ? `<span class="photo-cue" title="${I18n.t("photo.cue.title")}">📷</span>` : "")
   );
 }
 
@@ -189,10 +197,10 @@ function renderRelatedConditions() {
   const el = document.getElementById("related-conditions-list");
   if (canalStations.length === 0) {
     const msg = !thaiwaterEverSettled
-      ? "กำลังโหลดข้อมูลระดับน้ำคลอง…"
+      ? I18n.t("canal.status.loading")
       : lastFetchOk.thaiwater
-      ? "ไม่มีข้อมูลระดับน้ำคลองขณะนี้"
-      : "โหลดข้อมูลระดับน้ำคลองไม่สำเร็จ";
+      ? I18n.t("canal.status.none")
+      : I18n.t("canal.status.error");
     el.innerHTML = `<p class="empty-hint">${msg}</p>`;
     return;
   }
@@ -201,10 +209,10 @@ function renderRelatedConditions() {
   el.innerHTML = nearest
     .map(
       (s) => `
-      <div class="station-item" data-key="${s.key}" title="คลิกเพื่อไปยังตำแหน่งบนแผนที่">
+      <div class="station-item" data-key="${s.key}" title="${I18n.t("flyto.title")}">
         <span class="name">${escapeHtml(s.label)}</span>
-        <span class="level">${s.levelM.toFixed(2)} ม.</span>
-        <span class="age">${FD.timeAgoTh(s.updated)}</span>
+        <span class="level">${I18n.fmtMeters(s.levelM.toFixed(2))}</span>
+        <span class="age">${I18n.timeAgo(s.updated)}</span>
       </div>`
     )
     .join("");
@@ -223,6 +231,9 @@ function flyToPoint(key) {
 
 // Bright, saturated solid colors — legible at a glance on the light basemap.
 const MARKER_COLOR = { red: "#e02f2f", yellow: "#f2a10d", green: "#1fA24a", gray: "#8a8a8a" };
+// Reuses the sidebar legend's own translated labels for a report's status
+// line, rather than a second, separately-translated copy of the same words.
+const STATUS_LEGEND_KEY = { red: "legend.blocked", yellow: "legend.caution", green: "legend.clear", gray: "legend.unknown" };
 
 // True only when EVERY contributor is a Traffy Fondue Citizen report — i.e.
 // nothing here is corroborated by a Sensor report or Event report. A citizen
@@ -251,7 +262,7 @@ function photoThumbHtml(url) {
   // would otherwise execute on click despite escapeHtml (which only escapes
   // markup metacharacters, not URI schemes).
   if (!url || !/^https?:\/\//i.test(url)) return "";
-  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="report-photo-link"><img class="report-photo-thumb" src="${escapeHtml(url)}" alt="รูปถ่ายจากผู้รายงาน" loading="lazy"/></a>`;
+  return `<a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" class="report-photo-link"><img class="report-photo-thumb" src="${escapeHtml(url)}" alt="${I18n.t("report.photo.alt")}" loading="lazy"/></a>`;
 }
 
 function contributorsHtml(p) {
@@ -259,11 +270,11 @@ function contributorsHtml(p) {
   if (contributors.length <= 1) return "";
   const rows = contributors
     .map((c) => {
-      const depthTxt = c.depthCm != null ? `${c.depthCm} ซม.` : "?";
-      return `<li>${escapeHtml(c.source)} &middot; ${FD.timeAgoTh(c.updated)} &middot; ${depthTxt}${photoThumbHtml(c.photoUrl)}</li>`;
+      const depthTxt = c.depthCm != null ? I18n.fmtDepth(c.depthCm) : "?";
+      return `<li>${escapeHtml(c.source)} &middot; ${I18n.timeAgo(c.updated)} &middot; ${depthTxt}${photoThumbHtml(c.photoUrl)}</li>`;
     })
     .join("");
-  return `<div class="corroboration-note">ยืนยันจาก ${contributors.length} รายงาน:<ul>${rows}</ul></div>`;
+  return `<div class="corroboration-note">${I18n.t("corroboration.note", { n: contributors.length })}<ul>${rows}</ul></div>`;
 }
 
 function renderMarkers() {
@@ -299,10 +310,10 @@ function renderMarkers() {
     // evidence available. See docs/adr/0003.
     const depthTxt =
       p.depthCm != null
-        ? `${p.depthCm} ซม.`
+        ? I18n.fmtDepth(p.depthCm)
         : hasUnverifiedPhoto(p)
-        ? "มีภาพประกอบ"
-        : "ไม่ทราบระดับน้ำ";
+        ? I18n.t("roadlist.hasphoto")
+        : I18n.t("legend.unknown");
     const stale = FD.ageMinutes(p.updated) > FD.STALE_WARN_MIN;
     // maxWidth widened from Leaflet's 300px default so the (larger) report
     // photo thumbnail has room without the popup feeling cramped.
@@ -310,12 +321,12 @@ function renderMarkers() {
       `
       <b>${escapeHtml(p.label)}</b>
       ${escapeHtml(p.sublabel || "")}<br/>
-      สถานะ: <b>${FD.STATUS_LABEL_TH[p.status]}</b> (${depthTxt})<br/>
-      แหล่งข้อมูล: ${escapeHtml(p.source)} &middot; ${FD.timeAgoTh(p.updated)}${stale ? " &middot; <span class=\"stale-tag\">ข้อมูลเก่า</span>" : ""}
-      ${citizen ? '<p class="citizen-note">รายงานจากประชาชน — ไม่ยืนยันโดยเซ็นเซอร์</p>' : ""}
+      ${I18n.t("popup.status.label")} <b>${I18n.t(STATUS_LEGEND_KEY[p.status])}</b> (${depthTxt})<br/>
+      ${I18n.t("popup.source.label")} ${escapeHtml(p.source)} &middot; ${I18n.timeAgo(p.updated)}${stale ? ` &middot; <span class="stale-tag">${I18n.t("legend.stale")}</span>` : ""}
+      ${citizen ? `<p class="citizen-note">${I18n.t("citizen.note")}</p>` : ""}
       ${(p.contributors || [p]).length <= 1 ? photoThumbHtml(p.photoUrl) : ""}
       ${contributorsHtml(p)}
-      <br/><button class="popup-add-btn" data-key="${p.key}">เพิ่มเข้าเส้นทาง</button>
+      <br/><button class="popup-add-btn" data-key="${p.key}">${I18n.t("popup.addbtn")}</button>
     `,
       { maxWidth: 340 }
     );
@@ -337,10 +348,10 @@ function renderRoadList(filterText) {
   if (filtered.length === 0) {
     listEl.innerHTML = `<p class="empty-hint">${
       allPoints.length === 0
-        ? "ไม่มีรายงานน้ำท่วมขณะนี้"
+        ? I18n.t("roadlist.empty.none")
         : q
-        ? "ไม่พบถนนที่ค้นหา"
-        : "ไม่มีรายงานในช่วงเวลานี้ — ลองขยายตัวกรอง"
+        ? I18n.t("roadlist.empty.nomatch")
+        : I18n.t("roadlist.empty.filtered")
     }</p>`;
     return;
   }
@@ -350,13 +361,13 @@ function renderRoadList(filterText) {
       const stale = FD.ageMinutes(p.updated) > FD.STALE_WARN_MIN;
       return `
       <div class="road-item ${selectedKeys.has(p.key) ? "selected" : ""}" data-key="${p.key}">
-        <span class="road-item-main" data-key="${p.key}" title="คลิกเพื่อไปยังตำแหน่งบนแผนที่">
+        <span class="road-item-main" data-key="${p.key}" title="${I18n.t("flyto.title")}">
           ${statusDotHtml(p.status, isCitizenOnly(p), hasUnverifiedPhoto(p))}
           <span class="name">${escapeHtml(p.label)}</span>
         </span>
-        <span class="depth">${p.depthCm != null ? p.depthCm + " ซม." : "?"}</span>
-        <span class="age ${stale ? "stale" : ""}">${FD.timeAgoTh(p.updated)}</span>
-        <button class="add-btn" data-key="${p.key}" title="เพิ่ม/เอาออกจากเส้นทาง">${
+        <span class="depth">${p.depthCm != null ? I18n.fmtDepth(p.depthCm) : "?"}</span>
+        <span class="age ${stale ? "stale" : ""}">${I18n.timeAgo(p.updated)}</span>
+        <button class="add-btn" data-key="${p.key}" title="${I18n.t("road.addremove.title")}">${
           selectedKeys.has(p.key) ? "−" : "+"
         }</button>
       </div>`;
@@ -387,7 +398,7 @@ function renderRoute() {
   const selected = allPoints.filter((p) => selectedKeys.has(p.key));
 
   if (selected.length === 0) {
-    routeListEl.innerHTML = `<p class="empty-hint">ยังไม่ได้เลือกถนน — คลิก "+" จากรายการด้านล่าง หรือคลิกหมุดบนแผนที่</p>`;
+    routeListEl.innerHTML = `<p class="empty-hint">${I18n.t("route.list.empty")}</p>`;
     verdictEl.classList.add("hidden");
     return;
   }
@@ -397,13 +408,13 @@ function renderRoute() {
       const stale = FD.ageMinutes(p.updated) > FD.STALE_WARN_MIN;
       return `
       <div class="route-item">
-        <span class="route-item-main" data-key="${p.key}" title="คลิกเพื่อไปยังตำแหน่งบนแผนที่">
+        <span class="route-item-main" data-key="${p.key}" title="${I18n.t("flyto.title")}">
           ${statusDotHtml(p.status, isCitizenOnly(p), hasUnverifiedPhoto(p))}
           <span class="name">${escapeHtml(p.label)}</span>
-          <span class="depth">${p.depthCm != null ? p.depthCm + " ซม." : "?"}</span>
-          <span class="age ${stale ? "stale" : ""}">${FD.timeAgoTh(p.updated)}</span>
+          <span class="depth">${p.depthCm != null ? I18n.fmtDepth(p.depthCm) : "?"}</span>
+          <span class="age ${stale ? "stale" : ""}">${I18n.timeAgo(p.updated)}</span>
         </span>
-        <button class="remove-btn" data-key="${p.key}" title="เอาออก">&times;</button>
+        <button class="remove-btn" data-key="${p.key}" title="${I18n.t("route.remove.title")}">&times;</button>
       </div>`;
     })
     .join("");
@@ -423,16 +434,16 @@ function renderRoute() {
   const badge = `<span class="badge ${worst.status}">${FD.STATUS_BADGE[worst.status]}</span>`;
   if (worst.status === "red") {
     verdictEl.classList.add("blocked");
-    verdictEl.innerHTML = `${badge} ผ่านไม่ได้ — "${escapeHtml(worst.label)}" น้ำท่วมสูง`;
+    verdictEl.innerHTML = `${badge}${I18n.t("verdict.blocked", { road: escapeHtml(worst.label) })}`;
   } else if (worst.status === "yellow" || worst.status === "gray") {
     verdictEl.classList.add("caution");
     verdictEl.innerHTML =
       worst.status === "yellow"
-        ? `${badge} ระวัง — "${escapeHtml(worst.label)}" น้ำท่วม ${worst.depthCm ?? "?"} ซม.`
-        : `${badge} ไม่ทราบระดับน้ำที่ "${escapeHtml(worst.label)}"`;
+        ? `${badge}${I18n.t("verdict.caution", { road: escapeHtml(worst.label), depth: worst.depthCm ?? "?" })}`
+        : `${badge}${I18n.t("verdict.unknown", { road: escapeHtml(worst.label) })}`;
   } else {
     verdictEl.classList.add("ok");
-    verdictEl.innerHTML = `${badge} ผ่านได้ — ไม่มีรายงานน้ำท่วมรุนแรงในเส้นทางนี้`;
+    verdictEl.innerHTML = `${badge}${I18n.t("verdict.clear")}`;
   }
 }
 
@@ -460,7 +471,7 @@ function hideLoadingOverlay() {
 // far. Called independently by refreshReports() and refreshThaiWater() since
 // they no longer await each other — see thaiwaterEverSettled's comment.
 function updateStatusLine() {
-  const now = new Date().toLocaleTimeString("th-TH", { hour: "2-digit", minute: "2-digit" });
+  const now = I18n.fmtTime(new Date());
   const failures = [];
   if (!lastFetchOk.bma) failures.push("BMA");
   if (!lastFetchOk.longdo) failures.push("Longdo/iTIC");
@@ -468,9 +479,9 @@ function updateStatusLine() {
   if (thaiwaterEverSettled && !lastFetchOk.thaiwater) failures.push("ThaiWater");
 
   if (failures.length === 0) {
-    setStatusLine(`อัปเดต ${now} · ${visiblePoints().length}/${allPoints.length} จุด`, false);
+    setStatusLine(I18n.t("status.updated", { time: now, visible: visiblePoints().length, total: allPoints.length }), false);
   } else {
-    setStatusLine(`อัปเดต ${now} — โหลด ${failures.join(", ")} ไม่สำเร็จ`, true);
+    setStatusLine(I18n.t("status.failed", { time: now, sources: failures.join(", ") }), true);
   }
 }
 
@@ -479,7 +490,7 @@ function updateStatusLine() {
 // see thaiwaterEverSettled's comment for why ThaiWater is deliberately not
 // one of these three.
 async function refreshReports() {
-  setStatusLine("กำลังอัปเดต…", false);
+  setStatusLine(I18n.t("status.updating"), false);
   const [bmaRes, longdoRes, traffyRes] = await Promise.allSettled([
     FD.loadBMA(),
     FD.loadLongdo(),
@@ -583,6 +594,18 @@ function main() {
     }
     canalToggle.setAttribute("aria-pressed", String(!showing));
     canalToggle.classList.toggle("active", !showing);
+  });
+
+  // The map/road-list/route/status-line strings above are all generated by
+  // this file (not swept by I18n.applyTranslations's data-i18n scan), so a
+  // language toggle needs its own re-render pass to pick up the new language.
+  document.addEventListener("i18n:change", () => {
+    renderMarkers();
+    renderRoadList(document.getElementById("road-search").value);
+    renderRoute();
+    renderRelatedConditions();
+    renderCanalMarkers();
+    updateStatusLine();
   });
 
   refreshAll();
