@@ -600,7 +600,10 @@ async function refreshReports() {
     ...(lastFetchOk.traffy ? traffyRes.value.points : []),
   ];
   allPoints = FD.mergeCorroboration(rawPoints);
-  reportPhotos = lastFetchOk.traffy ? traffyRes.value.photos : [];
+  reportPhotos = [
+    ...(lastFetchOk.traffy ? traffyRes.value.photos : []),
+    ...(lastFetchOk.longdo ? longdoRes.value.photos : []),
+  ];
 
   renderMarkers();
   renderRoadList(document.getElementById("road-search").value);

@@ -472,6 +472,7 @@
   // Pure parser — `now` (ms) is a parameter so it's testable with fixtures.
   function parseLongdo(events, now) {
     const points = [];
+    const photos = []; // Report photos for the gallery — same flood/Bangkok/expiry filters as points
     let floodEventCount = 0;
     for (const e of events) {
       if (e.icon !== "flood") continue;
@@ -501,20 +502,39 @@
       const text = `${e.title_en || e.title || ""} — ${e.description_en || e.description || ""}`;
       const depthCm = parseDepthCm(text);
 
+      const updated = e.start ? e.start.replace(" ", "T") : null;
+      const source = `Longdo/iTIC${e.contributor ? " · " + e.contributor : ""}`;
+      const key = `longdo-${e.eid}`;
       points.push({
-        key: `longdo-${e.eid}`,
+        key,
         label: e.title_en || e.title,
         sublabel: e.description_en || e.description || "",
         status: classify(depthCm, text),
         depthCm,
-        updated: e.start ? e.start.replace(" ", "T") : null,
-        source: `Longdo/iTIC${e.contributor ? " · " + e.contributor : ""}`,
+        updated,
+        source,
         lat,
         lng,
         text,
       });
+      // `images` is an array of event.longdo.com/image/view/<id> URLs on some
+      // events. A photo is evidence only; it never touches `status`.
+      const image = Array.isArray(e.images) ? e.images.find((u) => /^https?:\/\//i.test(u)) : null;
+      if (image && startMs != null) {
+        photos.push({
+          key,
+          photoUrl: image,
+          updated,
+          tsMs: startMs,
+          place: e.title || e.title_en || "",
+          source,
+          lat,
+          lng,
+          resolved: false,
+        });
+      }
     }
-    return { points, eventCount: events.length, floodEventCount };
+    return { points, photos, eventCount: events.length, floodEventCount };
   }
 
   // Flood-only query reaches back ~25 h (vs ~13 h plain) — see ADR-0001

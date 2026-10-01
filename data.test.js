@@ -576,3 +576,50 @@ test("loadTraffy rejects when both calls fail so the source shows as unavailable
     withUrlRoutedNetwork(() => new Error("down"), () => FD.loadTraffy())
   );
 });
+
+// ---- Longdo event images in the gallery (ticket 05) ----
+
+test("parseLongdo exposes the first image as a Report photo, and none when absent", () => {
+  const { photos, points } = FD.parseLongdo(
+    [
+      longdoEvent({ eid: "with", images: ["https://event.longdo.com/image/view/1"] }),
+      longdoEvent({ eid: "without" }),
+    ],
+    NOW_MS
+  );
+  assert.deepEqual(photos.map((p) => p.key), ["longdo-with"]);
+  assert.equal(photos[0].photoUrl, "https://event.longdo.com/image/view/1");
+  assert.match(photos[0].source, /^Longdo\/iTIC/);
+  assert.equal(photos[0].lat, 13.7563);
+  assert.equal(points.length, 2); // markers unchanged
+  assert.equal(points.find((p) => p.key === "longdo-with").photoUrl, undefined);
+});
+
+test("parseLongdo photos exclude non-flood, expired, non-Bangkok events and non-http image URLs", () => {
+  const img = ["https://event.longdo.com/image/view/1"];
+  const { photos } = FD.parseLongdo(
+    [
+      longdoEvent({ eid: "acc", icon: "accident", images: img }),
+      longdoEvent({ eid: "exp", stop: "2026-10-01 10:00:00", images: img }),
+      longdoEvent({ eid: "far", latitude: "18.79", longitude: "98.98", images: img }),
+      longdoEvent({ eid: "bad", images: ["javascript:alert(1)"] }),
+    ],
+    NOW_MS
+  );
+  assert.deepEqual(photos, []);
+});
+
+test("buildPhotoGallery merges Traffy and Longdo photos newest first, each tagged by source", () => {
+  const traffy = FD.parseTraffy(
+    { features: [traffyFeature({ id: "t", timestamp: "2026-10-01 11:30:00", photo_url: "https://x/t.jpg" })] },
+    NOW_MS
+  ).photos;
+  const longdo = FD.parseLongdo(
+    [longdoEvent({ eid: "l", start: "2026-10-01 11:45:00", images: ["https://event.longdo.com/image/view/9"] })],
+    NOW_MS
+  ).photos;
+  const { items } = FD.buildPhotoGallery([...traffy, ...longdo], NOW_MS, 12, 0);
+  assert.deepEqual(items.map((i) => i.key), ["longdo-l", "traffy-t"]);
+  assert.equal(items[0].source.startsWith("Longdo/iTIC"), true);
+  assert.equal(items[1].source, "Traffy Fondue");
+});
