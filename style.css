@@ -922,9 +922,10 @@ h1, h2 { margin: 0; }
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  border: 2px solid #ffffff;
+  border: 1.5px solid #ffffff;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
+.photo-pin-disc.unknown svg { width: 8px; height: 8px; }
 .photo-pin-disc.citizen { border-style: dashed; }
 .photo-pin-disc.unknown { opacity: 0.8; }
 .photo-pin-disc svg { display: block; }

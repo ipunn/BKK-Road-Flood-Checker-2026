@@ -250,7 +250,7 @@ function renderPhotoGallery() {
   const el = document.getElementById("photo-gallery");
   const moreBtn = document.getElementById("photo-gallery-more");
   const { items, hasMore, emptyReason } = FD.buildPhotoGallery(reportPhotos, Date.now(), galleryShown, 0, galleryArea);
-  const incomplete = !lastFetchOk.traffy
+  const incomplete = reportSettled.traffy && !lastFetchOk.traffy
     ? `<p class="empty-hint">${I18n.t("gallery.incomplete")}</p>`
     : "";
   if (!items.length) {
@@ -492,10 +492,10 @@ function requestUserLocation() {
 }
 
 const CAMERA_SVG =
-  '<svg viewBox="0 0 24 24" width="13" height="13" aria-hidden="true"><path fill="#fff" d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg>';
+  '<svg viewBox="0 0 24 24" width="10" height="10" aria-hidden="true"><path fill="#fff" d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg>';
 
 function photoPinIcon(color, citizen, unknown) {
-  const n = unknown ? 20 : 24;
+  const n = unknown ? 15 : 18;
   return L.divIcon({
     className: "photo-pin",
     html: `<span class="photo-pin-disc${citizen ? " citizen" : ""}${unknown ? " unknown" : ""}" style="background:${color}">${CAMERA_SVG}</span>`,
@@ -630,9 +630,9 @@ function hideLoadingOverlay() {
 function updateStatusLine() {
   const now = I18n.fmtTime(new Date());
   const failures = [];
-  if (!lastFetchOk.bma) failures.push("BMA");
-  if (!lastFetchOk.longdo) failures.push("Longdo/iTIC");
-  if (!lastFetchOk.traffy) failures.push("Traffy Fondue");
+  if (reportSettled.bma && !lastFetchOk.bma) failures.push("BMA");
+  if (reportSettled.longdo && !lastFetchOk.longdo) failures.push("Longdo/iTIC");
+  if (reportSettled.traffy && !lastFetchOk.traffy) failures.push("Traffy Fondue");
   if (thaiwaterEverSettled && !lastFetchOk.thaiwater) failures.push("ThaiWater");
 
   if (failures.length === 0) {
@@ -646,35 +646,48 @@ function updateStatusLine() {
 // map/road-list/route as soon as they're all in. Gates the loading overlay:
 // see thaiwaterEverSettled's comment for why ThaiWater is deliberately not
 // one of these three.
-async function refreshReports() {
-  setStatusLine(I18n.t("status.updating"), false);
-  const [bmaRes, longdoRes, traffyRes] = await Promise.allSettled([
-    FD.loadBMA(),
-    FD.loadLongdo(),
-    FD.loadTraffy(),
+// Each report source renders the moment it arrives (a slow one no longer holds
+// up the others or the loading overlay). Last good data per source is kept, so
+// a refresh in flight never blanks the map.
+const reportData = { bma: null, longdo: null, traffy: null };
+const reportSettled = { bma: false, longdo: false, traffy: false };
+
+function applyReports() {
+  allPoints = FD.mergeCorroboration([
+    ...(reportData.bma ? reportData.bma.points : []),
+    ...(reportData.longdo ? reportData.longdo.points : []),
+    ...(reportData.traffy ? reportData.traffy.points : []),
   ]);
-
-  lastFetchOk.bma = bmaRes.status === "fulfilled";
-  lastFetchOk.longdo = longdoRes.status === "fulfilled";
-  lastFetchOk.traffy = traffyRes.status === "fulfilled";
-
-  const rawPoints = [
-    ...(lastFetchOk.bma ? bmaRes.value.points : []),
-    ...(lastFetchOk.longdo ? longdoRes.value.points : []),
-    ...(lastFetchOk.traffy ? traffyRes.value.points : []),
-  ];
-  allPoints = FD.mergeCorroboration(rawPoints);
   reportPhotos = [
-    ...(lastFetchOk.traffy ? traffyRes.value.photos : []),
-    ...(lastFetchOk.longdo ? longdoRes.value.photos : []),
+    ...(reportData.traffy ? reportData.traffy.photos : []),
+    ...(reportData.longdo ? reportData.longdo.photos : []),
   ];
-
   renderMarkers();
   renderRoadList(document.getElementById("road-search").value);
   renderPhotoGallery();
   hideLoadingOverlay(); // no-op after the first successful cycle — see its own comment
-
   updateStatusLine();
+}
+
+function refreshReports() {
+  setStatusLine(I18n.t("status.updating"), false);
+  const loaders = { bma: FD.loadBMA, longdo: FD.loadLongdo, traffy: FD.loadTraffy };
+  for (const [name, load] of Object.entries(loaders)) {
+    load().then(
+      (value) => {
+        reportData[name] = value;
+        lastFetchOk[name] = true;
+      },
+      (err) => {
+        console.error(`Failed to load ${name}`, err);
+        lastFetchOk[name] = false;
+        reportData[name] = null;
+      }
+    ).then(() => {
+      reportSettled[name] = true;
+      applyReports();
+    });
+  }
 }
 
 // ThaiWater's Related-conditions panel — fetched on its own cadence,
@@ -906,7 +919,10 @@ function main() {
   });
 
   // Every layer is on by default; the chips only switch them off.
-  [floodCentreToggle, gistdaToggle, canalToggle].forEach((t) => t.click());
+  // The canal chip is cheap; the flood-centre fetch and GISTDA's script + tiles
+  // wait until the reports have had a head start.
+  canalToggle.click();
+  setTimeout(() => [floodCentreToggle, gistdaToggle].forEach((t) => t.click()), 2000);
 
   refreshAll();
   setInterval(refreshAll, FD.REFRESH_MS);
