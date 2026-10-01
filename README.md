@@ -8,8 +8,9 @@ Department (TMD), and DDPM. BMA flood hotline: **1555**.
 
 ## What it does
 
-- Pulls **live** flood reports from three public feeds directly in your browser, plus a
-  fourth read-only canal water-level feed for context (no backend, no API key, no
+- Pulls **live** flood reports from three public feeds directly in your browser, plus
+  read-only context layers — canal water levels, the BMA flood-centre flooded-roads
+  sheet and GISTDA 24 h flood-warning tiles (no backend, no API key, no
   cached/mock data — if a feed is down, the status line says so instead of showing
   stale numbers as if they were fresh).
 - Colour-codes each reported point by car passability using a simple depth threshold.
@@ -27,7 +28,7 @@ Department (TMD), and DDPM. BMA flood hotline: **1555**.
 | [Traffy Fondue](https://bangkok.traffy.in.th) citizen reports | `publicapi.traffy.in.th/teamchadchart-stat-api/geojson/v2` | BMA/NSTDA's official citizen issue-reporting channel, filtered to flood-tagged tickets. **Not sensor-confirmed** — capped at "caution" severity and merged with corroborating reports instead of shown standalone. Includes the citizen-submitted photo attached to each ticket, when one exists, shown on the map so you can judge it yourself. This is an undocumented endpoint (see [ADR-0001](docs/adr/0001-traffy-fondue-undocumented-endpoint.md)); it can change or break without notice. |
 | [ThaiWater](https://www.thaiwater.net) canal water levels | `twa-api-public.thaiwater.net/v2/waterlevel/canal` | Canal-level readings near the map view, shown as a **Related condition**, not a road report — it never affects a road's own passability status. Uses ThaiWater's public fallback key, not a registered one of our own (see [ADR-0004](docs/adr/0004-thaiwater-public-key.md)); it can change or break without notice. |
 
-All four endpoints are public and either send `Access-Control-Allow-Origin: *` (BMA,
+All the endpoints above are public and either send `Access-Control-Allow-Origin: *` (BMA,
 Longdo) or otherwise permit direct browser fetches (Traffy, ThaiWater), which is why
 this can run as a plain static page instead of needing a server-side proxy.
 
@@ -41,10 +42,10 @@ text, then classified:
 | < 10 cm | 🟢 ผ่านได้ (green) | Passable |
 | 10–30 cm | 🟡 ผ่านได้แต่ระวัง (yellow) | Passable with caution / high-clearance vehicles only |
 | > 30 cm | 🔴 ผ่านไม่ได้ (red) | Treat as impassable by car |
-| unstated | ⚪ ไม่ทราบระดับน้ำ (gray) | Depth not reported — treated as caution, not "clear" |
+| unstated | ⚪ ไม่ทราบระดับน้ำ (gray) | Depth not reported — shown as unknown, never as "clear" ([ADR-0003](docs/adr/0003-no-qualitative-depth-inference.md)) |
 
 A report explicitly saying "ผ่านไม่ได้" / "impassable" is always red regardless of any
-parsed number. Thresholds are defined as constants at the top of `app.js` — adjust them
+parsed number. Thresholds are the `THRESH_*` constants in `data.js` — adjust them
 there if 10/30 cm doesn't match your vehicle's clearance.
 
 Only points with a **currently active** report are shown: a BMA sensor reading with no
@@ -75,7 +76,7 @@ from `file://` origins, so use a local server as above.
 
 - Coverage is limited to what BMA sensors and Longdo/iTIC contributors report — many
   flooded sois and minor roads won't have a sensor and may not appear at all.
-- No routing engine: this is a manual "check the roads on my route" tool, not
+- No routing engine: this is a map of reported flooding to check roads against, not
   turn-by-turn navigation. Cross-reference with Google/Longdo Maps traffic layers.
 - Depth-to-passability thresholds are a simplification — actual passability also
   depends on vehicle ground clearance, water flow speed, and submerged hazards
