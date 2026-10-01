@@ -8,23 +8,29 @@ web
 
 ## Users
 Bangkok drivers and commuters deciding, in the moment, whether to leave and which
-road to take during active flooding — not just the original requester but anyone
-they share the link with. Primary viewing context is mobile, one-handed, in a car
+road to take during active flooding — and, since ADR-0007, anyone in Bangkok
+asking what is flooded in their own neighbourhood, lane, or community — not just
+the original requester but anyone they share the link with. Primary viewing context is mobile, one-handed, in a car
 or on the street: outdoor glare, possibly patchy signal during storms, glancing
 quickly rather than reading carefully. Desktop/pre-trip planning is a secondary
 context.
 
 ## Product Purpose
-Answer one question fast: can a car get through this road right now? It aggregates
-live Bangkok flood-sensor and citizen-report data, classifies each reported point
+Answer one question fast: what is flooded near here right now? For roads that
+means the original question — can a car get through this road? It aggregates live
+Bangkok flood-sensor and citizen-report data, classifies each reported road point
 by car passability, and lets a driver check the specific roads on their route
-before or during a trip.
+before or during a trip. For neighbourhoods, lanes, and communities it shows
+recent reports and their photos by area (the Area flood view), with no
+passability verdict. See docs/adr/0007.
 
 ## Positioning
 Unlike the underlying official/aggregator feeds it draws from, this tool converts
 raw sensor and report data into a direct passability verdict (clear / caution /
 blocked) for a driver's own chosen route, with visible data freshness rather than
-presenting live-look numbers that may already be stale.
+presenting live-look numbers that may already be stale. Passability stays the
+core claim for roads; area flooding is shown as dated evidence (reports and
+photos), never as an inferred verdict.
 
 ## Operating Context
 Used during an active, ongoing flood event (started ~Sept 2026). Viewed on phones
