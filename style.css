@@ -917,6 +917,7 @@ h1, h2 { margin: 0; }
    slightly translucent, with a thin white halo so it reads on any basemap. */
 .photo-pin { background: transparent; border: none; }
 .photo-pin-glyph {
+  position: relative;
   display: block;
   width: 100%;
   height: 100%;
@@ -924,4 +925,15 @@ h1, h2 { margin: 0; }
   opacity: 0.85;
   filter: drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff);
 }
+.photo-pin-dot {
+  position: absolute;
+  top: -3px;
+  right: -3px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  border: 1px solid #fff;
+  box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.4);
+}
+.photo-pin-glyph.unknown .photo-pin-dot { width: 6px; height: 6px; }
 .photo-pin-glyph svg { display: block; width: 100%; height: 100%; }

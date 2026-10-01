@@ -494,13 +494,13 @@ function requestUserLocation() {
 const CAMERA_SVG =
   '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path fill="currentColor" d="M9 4 7.2 6H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3.2L15 4H9zm3 4.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9zm0 2a2.5 2.5 0 1 0 0 5 2.5 2.5 0 0 0 0-5z"/></svg>';
 
-// Camera glyph only (no disc): near-black, slightly translucent. The report's
-// status colour lives in the popup and the road list, not on this pin.
-function photoPinIcon(unknown) {
+// Camera glyph only (no disc): near-black, slightly translucent, with a tiny
+// status-coloured dot in the corner so severity still reads on the map.
+function photoPinIcon(color, unknown) {
   const n = unknown ? 12 : 14;
   return L.divIcon({
     className: "photo-pin",
-    html: `<span class="photo-pin-glyph${unknown ? " unknown" : ""}">${CAMERA_SVG}</span>`,
+    html: `<span class="photo-pin-glyph${unknown ? " unknown" : ""}">${CAMERA_SVG}<i class="photo-pin-dot" style="background:${color}"></i></span>`,
     iconSize: [n, n],
     iconAnchor: [n / 2, n / 2],
   });
@@ -525,7 +525,7 @@ function renderMarkers() {
     // A report that carries a photo gets a camera-glyph pin so "there's a photo
     // to look at" reads on the map without opening the popup.
     const marker = p.photoUrl
-      ? L.marker([p.lat, p.lng], { icon: photoPinIcon(unknown) })
+      ? L.marker([p.lat, p.lng], { icon: photoPinIcon(color, unknown) })
       : L.circleMarker([p.lat, p.lng], {
       radius: unknown ? 5 : 8,
       color: "#ffffff",
