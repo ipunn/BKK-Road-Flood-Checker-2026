@@ -5,7 +5,7 @@
 const FD = window.FloodData;
 const I18n = window.I18n;
 
-let map, markersLayer, camerasLayer, canalMarkersLayer, floodCentreLayer;
+let map, markersLayer, camerasLayer, canalMarkersLayer, floodCentreLayer, gistdaLayer;
 let floodCentreItems = []; // BMA flood-centre flooded-roads Related conditions — never a report
 let markersByKey = new Map();
 let canalMarkersByKey = new Map();
@@ -760,6 +760,68 @@ function main() {
     floodCentreToggle.classList.toggle("active", !showing);
   });
 
+  // GISTDA 24 h warning polygons: vector tiles, so Leaflet.VectorGrid is
+  // loaded from the CDN only on first toggle (no build step, no API key).
+  // A Related condition (CONTEXT.md) — no Passability status, no verdict input.
+  // The legend carries the "update time unknown" label (docs/adr/0008).
+  const gistdaToggle = document.getElementById("gistda-toggle");
+  const gistdaStatus = document.getElementById("gistda-status");
+  const gistdaShowError = () => {
+    gistdaStatus.textContent = I18n.t("gistda.error");
+    gistdaStatus.hidden = false;
+  };
+  const gistdaRenderLegend = () => {
+    gistdaStatus.className = "gistda-legend";
+    gistdaStatus.innerHTML =
+      `<span>${I18n.t("gistda.legend")}</span>` +
+      `<span><i class="swatch" style="background:${FD.gistdaWarnStyle(1).fillColor}"></i>${I18n.t("gistda.watch")}</span>` +
+      `<span><i class="swatch" style="background:${FD.gistdaWarnStyle(2).fillColor}"></i>${I18n.t("gistda.warning")}</span>` +
+      `<span>${I18n.t("gistda.note")}</span>`;
+    gistdaStatus.hidden = false;
+  };
+  const loadVectorGrid = () =>
+    window.L.vectorGrid
+      ? Promise.resolve()
+      : new Promise((resolve, reject) => {
+          const s = document.createElement("script");
+          s.src = "https://unpkg.com/leaflet.vectorgrid@1.3.0/dist/Leaflet.VectorGrid.bundled.min.js";
+          s.crossOrigin = "";
+          s.onload = resolve;
+          s.onerror = reject;
+          document.head.appendChild(s);
+        });
+  gistdaToggle.addEventListener("click", async () => {
+    const showing = gistdaToggle.getAttribute("aria-pressed") === "true";
+    if (!showing && !gistdaLayer) {
+      try {
+        await loadVectorGrid();
+        if (!(await FD.probeGistdaTiles())) throw new Error("GISTDA tile host unavailable");
+        gistdaLayer = L.vectorGrid.protobuf(FD.GISTDA_WARN_TILE_URL, {
+          maxNativeZoom: 6, // tiles stop at ~z6; the layer over-zooms like GISTDA's own client
+          vectorTileLayerStyles: {
+            flood_warn: (props) => FD.gistdaWarnStyle(props.class_risk) || { fill: false, stroke: false },
+          },
+          interactive: false,
+          pane: "overlayPane",
+        });
+      } catch (err) {
+        console.error("Failed to load GISTDA warning layer", err);
+        gistdaStatus.className = "empty-hint";
+        gistdaShowError();
+        return;
+      }
+    }
+    if (showing) {
+      map.removeLayer(gistdaLayer);
+      gistdaStatus.hidden = true;
+    } else {
+      gistdaLayer.addTo(map);
+      gistdaRenderLegend();
+    }
+    gistdaToggle.setAttribute("aria-pressed", String(!showing));
+    gistdaToggle.classList.toggle("active", !showing);
+  });
+
   // Canal markers are already kept up to date by refreshThaiWater() on the
   // normal refresh cycle regardless of toggle state (the sidebar's Related
   // conditions panel needs the data either way) — this toggle only controls
@@ -788,6 +850,7 @@ function main() {
     renderRelatedConditions();
     renderCanalMarkers();
     renderFloodCentreMarkers();
+    if (gistdaToggle.getAttribute("aria-pressed") === "true") gistdaRenderLegend();
     updateStatusLine();
   });
 

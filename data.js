@@ -937,7 +937,32 @@
     return { stations: out, history: nextHistory };
   }
 
+  // GISTDA LifeDee 24 h flood-warning vector tiles — an undocumented Cloud
+  // Run host (docs/adr/0008). Grid-cell polygons with an ordinal `class_risk`:
+  // 1 = Watch, 2 = Warning. Anything else is not drawn.
+  const GISTDA_WARN_TILE_URL =
+    "https://check-water-map-service-726396821992.asia-southeast3.run.app/tiles/flood-warn/{z}/{x}/{y}.pbf";
+  const GISTDA_PROBE_URL = GISTDA_WARN_TILE_URL.replace("{z}/{x}/{y}", "6/49/29");
+  function gistdaWarnStyle(classRisk) {
+    if (classRisk === 1) return { label: "watch", fillColor: "#f9a825", color: "#f9a825", fillOpacity: 0.35, weight: 0.5, fill: true };
+    if (classRisk === 2) return { label: "warning", fillColor: "#b71c1c", color: "#b71c1c", fillOpacity: 0.4, weight: 0.5, fill: true };
+    return null;
+  }
+  // A 404 means "no polygons in this tile" (GISTDA's own client treats it so);
+  // a network/CORS failure or 5xx/401/403 means the host is gone or blocked.
+  async function probeGistdaTiles(fetchFn) {
+    try {
+      const res = await (fetchFn || fetch)(GISTDA_PROBE_URL);
+      return res.status === 404 || (res.status >= 200 && res.status < 300);
+    } catch (_) {
+      return false;
+    }
+  }
+
   globalTarget.FloodData = {
+    GISTDA_WARN_TILE_URL,
+    gistdaWarnStyle,
+    probeGistdaTiles,
     REFRESH_MS,
     BMA_STALE_MS,
     LONGDO_FALLBACK_MS,

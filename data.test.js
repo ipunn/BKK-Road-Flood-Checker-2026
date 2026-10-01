@@ -702,3 +702,23 @@ test("countReportsByDistrict groups by district, covers the window boundary, and
   assert.equal(counts.find((c) => c.district === "บางแค").count, 0);
   assert.equal(counts.reduce((n, c) => n + c.count, 0), 3);
 });
+
+// ---- GISTDA 24 h flood-warning tiles (Related condition, ticket 11) ----
+
+test("gistdaWarnStyle maps class_risk 1 to Watch and 2 to Warning, and skips anything else", () => {
+  assert.equal(FD.gistdaWarnStyle(1).label, "watch");
+  assert.equal(FD.gistdaWarnStyle(2).label, "warning");
+  assert.notEqual(FD.gistdaWarnStyle(1).fillColor, FD.gistdaWarnStyle(2).fillColor);
+  assert.equal(FD.gistdaWarnStyle(null), null);
+  assert.equal(FD.gistdaWarnStyle(0), null);
+  assert.equal(FD.gistdaWarnStyle(3), null);
+});
+
+test("probeGistdaTiles: 200 and 404 (no polygons in tile) are available; network error and 5xx/403 are not", async () => {
+  const mk = (r) => async () => { if (r instanceof Error) throw r; return { status: r }; };
+  assert.equal(await FD.probeGistdaTiles(mk(200)), true);
+  assert.equal(await FD.probeGistdaTiles(mk(404)), true);
+  assert.equal(await FD.probeGistdaTiles(mk(500)), false);
+  assert.equal(await FD.probeGistdaTiles(mk(403)), false);
+  assert.equal(await FD.probeGistdaTiles(mk(new Error("blocked"))), false);
+});
