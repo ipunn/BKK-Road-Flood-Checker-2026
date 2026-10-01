@@ -51,7 +51,7 @@ components:
 ## Overview
 
 **Creative north star: "The Duty Board."** The product's real mechanism — pin a
-flood report, log its depth and time, judge whether a route can proceed — is
+flood report, log its depth and time, judge whether a road can be passed — is
 already a disaster-response situation-room object: a pinned board map with a
 clipboard duty log beside it, status marked by hand-stamped ink rather than
 colored pills. This direction executes that object directly instead of a
@@ -105,15 +105,15 @@ never a fourth face.
 
 Sidebar reads as a physical clipboard: ruled horizontal lines between rows
 (not rounded card separators), a bulldog-clip visual accent at the top of the
-route panel. Map markers are pin-and-tag shapes (a small rotated paper tag on
-a pin), not flat circle dots. No soft blurred drop shadows anywhere — depth
-comes from small hard-edged offset shadows (`2px 2px 0`), like a paper cutout,
-never a blurred elevation shadow.
+sidebar panel. Map markers are pin-and-tag shapes (a small rotated paper tag on
+a pin), not flat circle dots. Depth on stamps, tags and rows comes from small
+hard-edged offset shadows (`2px 2px 0`), like a paper cutout; only the bottom
+sheet and popups may use a soft blurred shadow (ADR-0010).
 
 ## Shapes
 
-Sharp corners throughout (`0–2px` radius) — a duty board has no rounded
-plastic UI chrome. Stamped elements (badges, the route verdict) carry a slight
+Sharp corners on stamps, tags and rows (`0–2px` radius). Interactive chrome
+(bottom sheet, chips, buttons) may be rounded (ADR-0010). Stamped elements (badges) carry a slight
 fixed rotation (stamps land crooked) and a double-ruled border instead of a
 solid fill.
 
@@ -121,22 +121,44 @@ solid fill.
 
 - **Stamp badge** (replaces the old tinted pill): outlined rectangle in the
   status ink color, uppercase mono/display label, rotated -2deg, no fill.
-- **Route verdict**: a large stamp-style mark ("ROUTE BLOCKED" / "PROCEED WITH
-  CAUTION" / "ROUTE CLEAR"), rotated, ink-colored border and text on the board
-  surface — not a filled colored box.
 - **Map marker**: custom divIcon paper tag with a brass pin head; tag border
   color = status ink color; depth value in mono type on the tag.
-- **Duty-log row** (road list / route list item): ruled row, mono timestamp
+- **Duty-log row** (road list item): ruled row, mono timestamp
   column right-aligned, no rounded hover card — hover darkens the row only.
-- **Tab button** (nav, refresh, freshness filter): flat rectangular tab,
+- **Tab button** (nav, refresh, freshness filter, gallery "show more"): flat rectangular tab,
   mono uppercase label, brass underline when active.
+
+## Motion
+
+Decided in ADR-0010; chosen from a three-way prototype (branch `prototype/motion`,
+variant C "Water"). All of it is `transform`/`opacity`, wrapped in
+`prefers-reduced-motion: no-preference`, with no library.
+
+- **Summary**: a water-blue wave rises once behind the peek strip / summary
+  panel (1500ms) and then stays still. A count that changes fades up (520ms).
+  The wave is tied to no number and carries no verdict.
+- **Pins**: a pin that was not on the map before fades in (520ms, blocked first,
+  14ms stagger, capped 420ms). A newly blocked pin also gets two one-shot ripples
+  in `stamp-red` — water colours never mean "blocked".
+- **Refresh**: manual refresh only (never the 3-min auto refresh) spins the icon
+  and plays a one-shot water wash over the map.
+- **Canal markers**: only warning/critical stations bob — the one looping
+  effect; paused while the tab is hidden.
 
 ## Do's and Don'ts
 
 - Do carry status via ink color + stamp shape; don't reintroduce translucent
   tinted rounded pill badges.
-- Do use hard offset shadows or none; don't use soft blurred box-shadows.
-- Do keep corners sharp (0–2px); don't default back to 6–12px rounded cards.
+- Do use hard offset shadows on stamps, tags and rows; soft blurred shadows are
+  allowed only for depth on the bottom sheet and popups (ADR-0010).
+- Do keep stamps and map tags sharp (0–2px); rounded corners are allowed only on
+  interactive chrome — sheet, chips, buttons (ADR-0010).
+- Do use soft glow only as a signal (blocked-pin halo, live dot, refresh flash),
+  never as decoration.
+- Do keep motion to `transform`/`opacity`, respect `prefers-reduced-motion`, and
+  loop only live/loading signals; no animation library, no build step.
+- Don't let water motion use stamp colours or imply a Passability status; it
+  lives only on Related-condition canal markers and a one-shot rise-in.
 - Do keep the map itself (Leaflet pan/zoom/popups) using standard, expected
   interaction — the duty-board treatment styles the chrome and markers, it
   never degrades map usability for a driver under pressure.

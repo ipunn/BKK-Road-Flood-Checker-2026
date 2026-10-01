@@ -5,7 +5,7 @@
 const FD = window.FloodData;
 const I18n = window.I18n;
 
-let map, markersLayer, canalMarkersLayer, floodCentreLayer, gistdaLayer;
+let map, markersLayer, ringLayer, canalMarkersLayer, floodCentreLayer, gistdaLayer;
 let floodCentreItems = []; // BMA flood-centre flooded-roads Related conditions — never a report
 let markersByKey = new Map();
 let canalMarkersByKey = new Map();
@@ -39,6 +39,7 @@ function initMap() {
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(map);
   markersLayer = L.layerGroup().addTo(map);
+  ringLayer = L.layerGroup().addTo(map); // one-shot "blocked" ripples, see animateNewPins
   floodCentreLayer = L.layerGroup(); // off by default, fetched on first show
   canalMarkersLayer = L.layerGroup(); // shown by default; the chip toggles it
 }
@@ -76,8 +77,7 @@ function canalStationIcon(waterLevelStatus) {
 }
 
 // Canal stations are a Related condition, not a report (CONTEXT.md) — no
-// Passability status, not merged, not selectable into a route, same as
-// camera pins. Rebuilt on every ThaiWater refresh so the layer (whether
+// Passability status, not merged. Rebuilt on every ThaiWater refresh so the layer (whether
 // currently shown or not) always reflects the latest fetch.
 const CANAL_TREND_GLYPH = { rising: "▲", falling: "▼", steady: "●" };
 
@@ -369,7 +369,7 @@ const STATUS_LEGEND_KEY = { red: "legend.blocked", yellow: "legend.caution", gre
 // that other source, so it must not show the "unconfirmed" treatment.
 // See CONTEXT.md "Citizen report" / "Corroboration".
 // Unmeasured ("gray") report with a real photo — the camera-cue condition,
-// factored out so the road list and route list can't drift apart on when to
+// factored out so the road list and the map marker can't drift apart on when to
 // show it. See docs/adr/0003.
 function hasUnverifiedPhoto(p) {
   return p.status === "gray" && !!p.photoUrl;
@@ -417,6 +417,21 @@ function fmtDist(m) {
   return m < 1000 ? I18n.t("summary.dist.m", { n: Math.round(m) }) : I18n.t("summary.dist.km", { n: (m / 1000).toFixed(1) });
 }
 
+// Motion (docs/adr/0010, DESIGN.md "Motion"): everything here is cosmetic and
+// gated by prefers-reduced-motion — CSS drops the animations, and the JS below
+// skips the extra DOM (ripples) so nothing is left behind.
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+function restartAnim(el, cls) {
+  if (!el) return;
+  el.classList.remove(cls);
+  void el.offsetWidth;
+  el.classList.add(cls);
+}
+const lastCounts = {}; // tile colour -> last rendered count; only a changed number animates
+const seenPinKeys = new Map(); // pin key -> first-seen time; only a pin that wasn't on the map before animates in
+const RIPPLE_MS = 1700;
+const PIN_IN_MS = 900; // longest pin-in animation incl. stagger (520ms + up to 420ms delay)
+
 function renderSummary() {
   const pts = visiblePoints();
   const s = FD.summarizePoints(pts, userLocation ? { origin: userLocation, radiusM: NEARME_RADIUS_M } : undefined);
@@ -425,11 +440,13 @@ function renderSummary() {
     ["yellow", "summary.caution", s.yellow],
     ["green", "summary.clear", s.green],
   ];
+  const rise = (c, n) => (lastCounts[c] !== n ? " rise" : "");
   document.getElementById("summary-stats").innerHTML = tiles
-    .map(([c, k, n]) => `<div class="stat ${c}${n === 0 ? " zero" : ""}"><span class="stat-n">${n}</span><span class="stat-l">${I18n.t(k)}</span></div>`)
+    .map(([c, k, n]) => `<div class="stat ${c}${n === 0 ? " zero" : ""}"><span class="stat-n${rise(c, n)}">${n}</span><span class="stat-l">${I18n.t(k)}</span></div>`)
     .join("");
   document.getElementById("summary-peek").innerHTML =
-    `<span class="peek-stats">${tiles.map(([c, k, n]) => `<span class="peek-stat ${c}${n === 0 ? " zero" : ""}"><b>${n}</b> ${I18n.t(k)}</span>`).join("")}</span>`;
+    `<span class="peek-stats">${tiles.map(([c, k, n]) => `<span class="peek-stat ${c}${n === 0 ? " zero" : ""}"><b class="${rise(c, n).trim()}">${n}</b> ${I18n.t(k)}</span>`).join("")}</span>`;
+  for (const [c, , n] of tiles) lastCounts[c] = n;
   const age = I18n.t("freshness." + maxAgeMinutes);
   const scope = userLocation
     ? I18n.t("summary.scope.near", { km: NEARME_RADIUS_M / 1000, age })
@@ -510,6 +527,8 @@ function renderMarkers() {
   renderSummary();
   markersLayer.clearLayers();
   markersByKey.clear();
+  const fresh = []; // pins that weren't on the map before this render
+  const now = performance.now();
   for (const p of visiblePoints()) {
     if (p.lat == null || p.lng == null || isNaN(p.lat) || isNaN(p.lng)) continue;
     // Plain color-coded circle marker, no number on the map itself — depth
@@ -565,7 +584,51 @@ function renderMarkers() {
     );
     markersLayer.addLayer(marker);
     markersByKey.set(p.key, marker);
+    // Report sources land one after another and each render rebuilds every pin,
+    // so a pin still mid-animation is re-queued with its elapsed time (below) to
+    // carry on instead of snapping to full opacity.
+    const first = seenPinKeys.get(p.key);
+    if (first === undefined) {
+      seenPinKeys.set(p.key, now);
+      fresh.push({ marker, p, age: 0 });
+    } else if (now - first < PIN_IN_MS) {
+      fresh.push({ marker, p, age: now - first });
+    }
   }
+  animateNewPins(fresh);
+}
+
+// A newly-arrived pin fades in (blocked ones first, staggered), and a newly
+// blocked one gets two one-shot ripples in its own stamp-red. Pins already on
+// the map never re-animate on a refresh. See DESIGN.md "Motion".
+function animateNewPins(fresh) {
+  if (reducedMotion.matches || fresh.length === 0) return;
+  fresh.sort((a, b) => FD.STATUS_RANK[b.p.status] - FD.STATUS_RANK[a.p.status]);
+  fresh.forEach(({ marker, p, age }, i) => {
+    const el = marker.getElement && marker.getElement();
+    if (el) {
+      el.style.setProperty("--d", age ? -age + "ms" : Math.min(i * 14, 420) + "ms");
+      el.classList.add("pin-in");
+    }
+    if (p.status === "red" && !age) {
+      const ring = L.marker([p.lat, p.lng], {
+        icon: L.divIcon({ className: "pin-ripple", html: "<i></i><i></i>", iconSize: [44, 44], iconAnchor: [22, 22] }),
+        interactive: false,
+        keyboard: false,
+        zIndexOffset: -500,
+      });
+      ringLayer.addLayer(ring);
+      setTimeout(() => ringLayer.removeLayer(ring), RIPPLE_MS);
+    }
+  });
+}
+
+// Manual refresh only (never the 3-min auto refresh): a spin on the button and
+// a water-coloured wash that rises and fades over the map.
+function playRefreshCue() {
+  if (reducedMotion.matches) return;
+  restartAnim(document.getElementById("refresh-btn"), "spin");
+  restartAnim(document.getElementById("map-wash"), "cue");
 }
 
 function renderRoadList(filterText) {
@@ -644,7 +707,7 @@ function updateStatusLine() {
 }
 
 // The three actual road-report sources — merged and rendered to the
-// map/road-list/route as soon as they're all in. Gates the loading overlay:
+// map/road-list as soon as they're all in. Gates the loading overlay:
 // see thaiwaterEverSettled's comment for why ThaiWater is deliberately not
 // one of these three.
 // Each report source renders the moment it arrives (a slow one no longer holds
@@ -743,7 +806,12 @@ function main() {
     galleryShown += GALLERY_PAGE;
     renderPhotoGallery();
   });
-  document.getElementById("refresh-btn").addEventListener("click", refreshAll);
+  document.getElementById("refresh-btn").addEventListener("click", () => {
+    refreshAll();
+    playRefreshCue();
+  });
+  // Looping signals (canal bob) shouldn't burn battery in a background tab.
+  document.addEventListener("visibilitychange", () => document.documentElement.classList.toggle("paused", document.hidden));
   document.getElementById("nearme-btn").addEventListener("click", () => {
     if (userLocation) clearUserLocation();
     else requestUserLocation();
@@ -906,7 +974,7 @@ function main() {
     canalToggle.classList.toggle("active", !showing);
   });
 
-  // The map/road-list/route/status-line strings above are all generated by
+  // The map/road-list/status-line strings above are all generated by
   // this file (not swept by I18n.applyTranslations's data-i18n scan), so a
   // language toggle needs its own re-render pass to pick up the new language.
   document.addEventListener("i18n:change", () => {
