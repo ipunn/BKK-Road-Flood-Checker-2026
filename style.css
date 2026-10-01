@@ -762,3 +762,17 @@ h1, h2 { margin: 0; }
 
 .canal-detail { font-size: 0.78rem; color: var(--ink-dim); }
 .station-item .trend { font-family: var(--font-data); font-size: 0.7rem; color: var(--ink-dim); }
+
+/* BMA flood-centre flooded-roads layer: a diamond, so it can't be read as a
+   road status dot (circle) or canal wave icon. Related condition only. */
+.floodcentre-icon { background: transparent; border: none; }
+.floodcentre-icon span {
+  display: block;
+  width: 11px;
+  height: 11px;
+  margin: 2px;
+  background: #6b3fa0;
+  border: 1.5px solid #ffffff;
+  transform: rotate(45deg);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}

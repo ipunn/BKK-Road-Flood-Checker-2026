@@ -5,7 +5,8 @@
 const FD = window.FloodData;
 const I18n = window.I18n;
 
-let map, markersLayer, camerasLayer, canalMarkersLayer;
+let map, markersLayer, camerasLayer, canalMarkersLayer, floodCentreLayer;
+let floodCentreItems = []; // BMA flood-centre flooded-roads Related conditions — never a report
 let markersByKey = new Map();
 let canalMarkersByKey = new Map();
 let allPoints = []; // every currently-active point, before the freshness filter
@@ -34,6 +35,7 @@ function initMap() {
   }).addTo(map);
   markersLayer = L.layerGroup().addTo(map);
   camerasLayer = L.layerGroup(); // not added to map — off by default, see CONTEXT.md "Camera pin"
+  floodCentreLayer = L.layerGroup(); // off by default, toggle-loaded like camerasLayer
   canalMarkersLayer = L.layerGroup(); // not added to map — off by default, same pattern as camerasLayer
 }
 
@@ -83,6 +85,26 @@ function canalDetailHtml(s) {
     parts.push(I18n.t(key, { n: Math.abs(s.marginToCriticalM).toFixed(2) }));
   }
   return parts.length ? `<br/><span class="canal-detail">${parts.join(" &middot; ")}</span>` : "";
+}
+
+// Diamond glyph — distinct from road dots (circles) and canal wave icons.
+// A Related condition (CONTEXT.md): no Passability status, no verdict input,
+// never merged. The sheet has no per-row timestamp, so every popup says so.
+function renderFloodCentreMarkers() {
+  floodCentreLayer.clearLayers();
+  for (const it of floodCentreItems) {
+    const marker = L.marker([it.lat, it.lng], {
+      icon: L.divIcon({ className: "floodcentre-icon", html: "<span></span>", iconSize: [16, 16] }),
+    });
+    marker.bindPopup(`
+      <b>${escapeHtml(it.road)}</b><br/>
+      ${escapeHtml(it.segment)}<br/>
+      ${it.note ? escapeHtml(it.note) + "<br/>" : ""}
+      <span class="related-conditions-note">${I18n.t("floodcentre.source")} &middot; ${I18n.t("floodcentre.unknowntime")} &middot; ${I18n.t("floodcentre.approx")}</span><br/>
+      <span class="related-conditions-note">${I18n.t("floodcentre.note")}</span>
+    `);
+    floodCentreLayer.addLayer(marker);
+  }
 }
 
 function renderCanalMarkers() {
@@ -602,6 +624,30 @@ function main() {
     cameraToggle.classList.toggle("active", !showing);
   });
 
+  // Flooded-roads sheet: one-time fetch on first toggle (retries on the next
+  // click if it failed), like camera pins. A failure only shows its own note.
+  const floodCentreToggle = document.getElementById("floodcentre-toggle");
+  const floodCentreStatus = document.getElementById("floodcentre-status");
+  floodCentreToggle.addEventListener("click", async () => {
+    const showing = floodCentreToggle.getAttribute("aria-pressed") === "true";
+    if (!showing && floodCentreItems.length === 0) {
+      try {
+        floodCentreItems = (await FD.loadFloodCentreSheet()).items;
+        floodCentreStatus.hidden = true;
+        renderFloodCentreMarkers();
+      } catch (err) {
+        console.error("Failed to load flood-centre sheet", err);
+        floodCentreStatus.textContent = I18n.t("floodcentre.error");
+        floodCentreStatus.hidden = false;
+        return;
+      }
+    }
+    if (showing) map.removeLayer(floodCentreLayer);
+    else floodCentreLayer.addTo(map);
+    floodCentreToggle.setAttribute("aria-pressed", String(!showing));
+    floodCentreToggle.classList.toggle("active", !showing);
+  });
+
   // Canal markers are already kept up to date by refreshThaiWater() on the
   // normal refresh cycle regardless of toggle state (the sidebar's Related
   // conditions panel needs the data either way) — this toggle only controls
@@ -628,6 +674,7 @@ function main() {
     renderRoute();
     renderRelatedConditions();
     renderCanalMarkers();
+    renderFloodCentreMarkers();
     updateStatusLine();
   });
 

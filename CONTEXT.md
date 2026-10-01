@@ -27,6 +27,29 @@ its status field resolving, or a fixed fallback expiry, whichever comes first.
 _Avoid_: Unverified report, crowdsourced report (implies anonymous/uncontrolled
 input, which this isn't — Traffy Fondue is an official, moderated channel)
 
+**Report photo**:
+A real image attached to a report — a citizen-submitted photo on a Citizen
+report, or an image on an Event report — never the shared stock/placeholder
+image Traffy Fondue attaches to tickets forwarded without one (see
+docs/adr/0003). Its job is evidence a driver can judge for themselves, not a
+severity signal: it never changes Passability status. Shown with a prominent
+age label, and may be older than the report that carried it is allowed to
+influence a route verdict — the photo's age window is independent of the
+verdict's freshness window.
+_Avoid_: Attachment, thumbnail (the thumbnail is just how a Report photo is
+displayed)
+
+**Area flood view**:
+A lens over the existing reports and Report photos that answers "what is
+flooded near here?" for a neighbourhood, lane, or community — not "can a car
+pass this road?". Reuses the same Citizen/Event reports rather than splitting
+them into a separate source (no text-based road-vs-area classification, per
+docs/adr/0003). Carries no Passability status and is never a route-verdict
+input; its evidence is the Report photo, the report text, and an age. Scoped
+to Bangkok.
+_Avoid_: Area flood report (implies a distinct report type or source, which
+this deliberately isn't)
+
 **Corroboration**:
 Two or more reports — from the same source or different sources — that refer
 to the same real-world flood point, judged by proximity (~300m) and both
@@ -50,8 +73,11 @@ and stamp shape in the UI, per `DESIGN.md`.
 _Avoid_: Severity, risk level
 
 **Related condition**:
-Upstream/contextual data (e.g. dam levels, canal discharge, rainfall) shown
-for awareness only — never a Sensor report, Event report, or Citizen report.
+Upstream/contextual data (e.g. dam levels, canal discharge, rainfall, GISTDA
+flood-warning/forecast polygons, BMA flood-centre's flooded-roads sheet) shown
+for awareness only — each with a visible source and age label (or an explicit
+"update time unknown" where the source gives none), off by default behind its
+own toggle — never a Sensor report, Event report, or Citizen report.
 It carries no Passability status, is never an input to a route verdict, and
 is never a `mergeCorroboration` contributor. Exists to give drivers *some*
 signal when report coverage is missing (most notably during a BMA outage),
@@ -59,7 +85,11 @@ not to replace a report. Shown unconditionally alongside reports, not gated
 behind or specially promoted during a source outage — it's additive context,
 not an outage fallback UI. The first instance, ThaiWater canal water-level
 stations (`data.js` `loadThaiWaterCanal`), relies on an undocumented public
-fallback API key — see ADR-0004.
+fallback API key — see ADR-0004. A second instance, BMA's flood-centre
+flooded-roads Google Sheet (`data.js` `loadFloodCentreSheet`), is fetched on
+first toggle, drawn as a diamond marker, and labelled "update time unknown"
+because the sheet has no per-row timestamp; its coordinates are approximate and
+its note text is BMA's own, shown verbatim and never parsed into a status.
 _Avoid_: Leading indicator, upstream data (both used informally during
 sourcing research; this is the canonical term going forward)
 

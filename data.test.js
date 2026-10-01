@@ -436,3 +436,49 @@ test("withCanalTrend: equal consecutive distinct readings are steady", () => {
   const second = FD.withCanalTrend([{ key: "a", levelM: 1.0, updated: "t2" }], first.history);
   assert.equal(second.stations[0].trend, "steady");
 });
+
+// --- BMA flood-centre flooded-roads sheet (ticket 09) ---
+
+const SHEET_HEADER =
+  '"ลำดับ","ถนน","ช่วง/จุดที่ท่วมสำคัญ","ระดับน้ำสูงสุด / สถานะ","ละติจูด (Y) โดยประมาณ","ลองจิจูด (X) โดยประมาณ"';
+
+test("parseFloodCentreSheet parses well-formed rows into items", () => {
+  const csv = [SHEET_HEADER, '"1","ลาดพร้าว","ซอยลาดพร้าว 113 - แยกบางกะปิ","30 ซม. (งดสัญจรผ่าน)*","13.7663","100.6441"'].join("\n");
+  const items = FD.parseFloodCentreSheet(csv);
+  assert.equal(items.length, 1);
+  assert.equal(items[0].road, "ลาดพร้าว");
+  assert.equal(items[0].segment, "ซอยลาดพร้าว 113 - แยกบางกะปิ");
+  assert.equal(items[0].note, "30 ซม. (งดสัญจรผ่าน)*");
+  assert.equal(items[0].lat, 13.7663);
+  assert.equal(items[0].lng, 100.6441);
+});
+
+test("parseFloodCentreSheet drops rows with missing, non-numeric, or out-of-Bangkok coordinates", () => {
+  const csv = [
+    SHEET_HEADER,
+    '"1","A","seg","5 ซม.","","100.6"',
+    '"2","B","seg","5 ซม.","abc","100.6"',
+    '"3","C","seg","5 ซม.","18.79","98.98"',
+    '"4","D","seg","5 ซม.","13.8","100.6"',
+  ].join("\n");
+  assert.deepEqual(FD.parseFloodCentreSheet(csv).map((i) => i.road), ["D"]);
+});
+
+test("parseFloodCentreSheet handles quoted commas, escaped quotes and CRLF", () => {
+  const csv = SHEET_HEADER + '\r\n"1","Road, with comma","seg ""q""","note","13.8","100.6"\r\n';
+  const items = FD.parseFloodCentreSheet(csv);
+  assert.equal(items[0].road, "Road, with comma");
+  assert.equal(items[0].segment, 'seg "q"');
+});
+
+test("parseFloodCentreSheet returns no items for empty or header-only input", () => {
+  assert.deepEqual(FD.parseFloodCentreSheet(""), []);
+  assert.deepEqual(FD.parseFloodCentreSheet(SHEET_HEADER), []);
+});
+
+test("parseFloodCentreSheet items are Related-condition-shaped: no status, depth, or timestamp", () => {
+  const item = FD.parseFloodCentreSheet(SHEET_HEADER + '\n"1","A","s","n","13.8","100.6"')[0];
+  assert.equal(item.status, undefined);
+  assert.equal(item.depthCm, undefined);
+  assert.equal(item.updated, undefined);
+});

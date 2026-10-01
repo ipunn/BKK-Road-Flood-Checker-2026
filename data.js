@@ -308,6 +308,13 @@
   const TRAFFY_PLACEHOLDER_PHOTO_URL =
     "https://storage.googleapis.com/traffy_public_bucket/attachment/2022-12/da2125e781282589d482070c3dba1726aa16a4a7.jpg";
 
+  // BMA flood centre's hand-edited "flooded roads" Google Sheet (the declared
+  // source behind now.bangkok.go.th's CCTV flood list). Undocumented, no
+  // per-row timestamp, columns/gid may change — same risk class as ADR-0001.
+  // See .scratch/peer-site-research/notes.md §6.2.
+  const FLOOD_CENTRE_SHEET_CSV =
+    "https://docs.google.com/spreadsheets/d/1CcX-TrFAOe1TdrWHK1XPAiaXqgQfdT9wvU_TCeFPmDs/gviz/tq?tqx=out:csv&gid=1730237192";
+
   const REFRESH_MS = 3 * 60 * 1000; // 3 min, matches BMA sensor refresh cadence
   const BMA_STALE_MS = 3 * 60 * 60 * 1000; // ignore BMA notifications older than 3h
   const LONGDO_FALLBACK_MS = 3 * 60 * 60 * 1000; // if a Longdo report has no "stop", expire after 3h
@@ -586,6 +593,57 @@
     return { points, ticketCount: features.length, floodTicketCount };
   }
 
+  // Minimal RFC-4180 CSV reader: quoted fields, "" escapes, commas/newlines
+  // inside quotes, CRLF. Returns an array of string arrays.
+  function parseCsv(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (inQuotes) {
+        if (c === '"' && text[i + 1] === '"') { field += '"'; i++; }
+        else if (c === '"') inQuotes = false;
+        else field += c;
+      } else if (c === '"') inQuotes = true;
+      else if (c === ",") { row.push(field); field = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(field); field = "";
+        rows.push(row); row = [];
+      } else field += c;
+    }
+    if (field !== "" || row.length) { row.push(field); rows.push(row); }
+    return rows;
+  }
+
+  // BMA flood-centre flooded-roads sheet -> Related-condition-shaped items.
+  // Deliberately NOT report-shaped: no status, depthCm, or timestamp (the sheet
+  // has none), never passed through classify() or mergeCorroboration. The
+  // note is BMA's own plain-language text, shown verbatim.
+  function parseFloodCentreSheet(csvText) {
+    const items = [];
+    const rows = parseCsv(csvText || "").slice(1); // drop header
+    rows.forEach((r, i) => {
+      const [, road, segment, note, latStr, lngStr] = r.map((x) => (x || "").trim());
+      if (!road || latStr === "" || lngStr === "") return;
+      const lat = Number(latStr);
+      const lng = Number(lngStr);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng) || !inBangkok(lat, lng)) return;
+      items.push({ key: `bma-floodcentre-${i}`, road, segment, note, lat, lng });
+    });
+    return items;
+  }
+
+  async function loadFloodCentreSheet() {
+    const res = await fetch(FLOOD_CENTRE_SHEET_CSV);
+    if (!res.ok) throw new Error(`${FLOOD_CENTRE_SHEET_CSV} -> HTTP ${res.status}`);
+    const items = parseFloodCentreSheet(await res.text());
+    if (items.length === 0) throw new Error("flood-centre sheet returned no usable rows");
+    return { items };
+  }
+
   // ThaiWater's canal-water-level response is a GeoJSON FeatureCollection per
   // basin id — flattened here across every basin rather than hardcoding the
   // Chao Phraya basin id, since a station right at Bangkok's edge could be
@@ -786,6 +844,8 @@
     loadThaiWaterCanal,
     nearestStations,
     waterLevelStatus,
+    parseFloodCentreSheet,
+    loadFloodCentreSheet,
     canalTrend,
     canalMarginToCriticalM,
     withCanalTrend,
