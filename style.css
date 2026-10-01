@@ -758,6 +758,10 @@ h1, h2 { margin: 0; }
 
 @media (max-width: 720px) {
   #app { position: relative; }
+  /* Zoom buttons are redundant on touch (pinch); freeing their column lets all three layer chips fit. */
+  .leaflet-control-zoom { display: none; }
+  .map-chips { left: 10px; flex-wrap: wrap; overflow-x: visible; }
+  .map-notes { left: 10px; }
   #map-wrap { margin-bottom: 190px; } /* fallback; app.js sets the real value from the collapsed sheet height */
   #sidebar {
     position: absolute;
