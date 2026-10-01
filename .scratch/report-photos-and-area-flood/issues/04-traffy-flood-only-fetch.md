@@ -15,4 +15,4 @@
 
 ## Comments
 
-Live check 2026-10-01: plain feed = 69 flood tickets over ~13 h (00:49-14:02); flood-only = 300 over ~25 h (09-30 14:00 - 10-01 14:39). ADR-0001 addendum matches shipped behaviour. UI not browser-tested in this session.
+Live check 2026-10-01: plain feed = 69 flood tickets over ~13 h (00:49-14:02); flood-only = 300 over ~25 h (09-30 14:00 - 10-01 14:39). ADR-0001 addendum matches shipped behaviour. Browser-checked live 2026-10-01.

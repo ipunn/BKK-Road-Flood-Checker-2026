@@ -18,4 +18,4 @@
 
 District/subdistrict finding (live, 2026-10-01, 300 flood tickets): `district` and `subdistrict` were never blank, all Thai names of Bangkok districts, no `เขต` prefix seen (the matcher still strips one defensively). Only 22 of 50 districts had reports, so the picker uses a vendored list of all 50 (`BANGKOK_DISTRICTS`) rather than the districts present in the data. Longdo events have no district field, so they match by place text only, not the district picker.
 
-Scope notes: the view lists Report photos only (reports without a real photo are not shown there). Empty-state split: "stale" = newest photo anywhere is older than the 3 h verdict window; "none" = feed is current but the area has nothing. "Far" is not modelled, since there is no device location. UI not browser-tested.
+Scope notes: the view lists Report photos only (reports without a real photo are not shown there). Empty-state split: "stale" = newest photo anywhere is older than the 3 h verdict window; "none" = feed is current but the area has nothing. "Far" is not modelled, since there is no device location. Browser-checked live 2026-10-01 (desktop + 390px).

@@ -14,4 +14,4 @@
 
 ## Comments
 
-Window is 6 h, top 8 districts with reports shown as chips; counts come from the gallery photo list, so reports without a real photo are not counted. UI not browser-tested.
+Window is 6 h, top 8 districts with reports shown as chips; counts come from the gallery photo list, so reports without a real photo are not counted. Browser-checked live 2026-10-01 (desktop + 390px).
