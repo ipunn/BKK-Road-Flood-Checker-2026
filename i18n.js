@@ -171,6 +171,11 @@
       "sources.row.gistda.provides": "พื้นที่เตือนภัยน้ำท่วม 24 ชม. ของ GISTDA (ระดับพื้นที่ เฝ้าระวัง/เตือนน้ำท่วม) — เป็นข้อมูลประกอบ (Related condition) ไม่ทราบเวลาอัปเดต ไม่มีผลต่อสถานะถนน",
       "sources.row.gistda.cycle": "ไม่ทราบรอบอัปเดต",
       "sources.limitations.li4": "ปุ่ม \"ใช้ตำแหน่งของฉัน\" ใช้ตำแหน่งในเบราว์เซอร์เท่านั้น ไม่ส่งออกและไม่เก็บไว้ ตำแหน่งบนคอมพิวเตอร์อาจคลาดเคลื่อนได้มาก",
+      "sources.floodcentre.name": "รายชื่อถนนน้ำท่วม (ศูนย์ป้องกันน้ำท่วม กทม.)",
+      "sources.stat.roadslisted": "ถนนในรายการ",
+      "sources.floodcentre.note": "ข้อมูลประกอบ — ตำแหน่งโดยประมาณ ไม่ทราบเวลาอัปเดต ไม่มีผลต่อสถานะถนน",
+      "sources.gistda.name": "GISTDA เตือนภัยน้ำท่วม 24 ชม.",
+      "sources.gistda.note": "ตรวจได้แค่ว่าเซิร์ฟเวอร์แผนที่ตอบสนองหรือไม่ — ไม่ทราบเวลาอัปเดตของข้อมูล ไม่มีผลต่อสถานะถนน",
       "sources.limitations.li3": "เกณฑ์ความลึกเป็นการประมาณอย่างง่าย ไม่รวมกระแสน้ำหรือสิ่งกีดขวางใต้น้ำ",
 
       "sources.status.updating": "กำลังอัปเดตข้อมูล…",
@@ -356,6 +361,11 @@
       "sources.row.gistda.provides": "GISTDA's 24-hour flood warning areas (area-level watch / flood warning) — a Related condition with unknown update time; it never changes a road's status",
       "sources.row.gistda.cycle": "Update cycle unknown",
       "sources.limitations.li4": "\"Use my location\" stays in your browser — not sent or stored. Desktop positions can be off by a lot",
+      "sources.floodcentre.name": "Flooded roads (BMA flood centre)",
+      "sources.stat.roadslisted": "roads listed",
+      "sources.floodcentre.note": "Context only — approximate positions, update time unknown, never changes a road's status",
+      "sources.gistda.name": "GISTDA 24 h flood warning",
+      "sources.gistda.note": "We can only check that the tile server answers — the data's update time is unknown; it never changes a road's status",
       "sources.limitations.li3": "Depth thresholds are a simple estimate — currents and submerged obstacles aren't accounted for",
 
       "sources.status.updating": "Updating data…",

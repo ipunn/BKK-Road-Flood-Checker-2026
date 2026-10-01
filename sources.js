@@ -84,15 +84,33 @@ function renderStationCard(name, ok, stations, extraRows) {
     </div>`;
 }
 
+// Related-condition sources with no per-item timestamp (flood-centre sheet,
+// GISTDA tiles): the card says what can be checked — reachable or not — and
+// repeats that no update time is known.
+function renderSimpleCard(name, ok, statHtml, noteKey) {
+  return `
+    <div class="source-card ${ok ? "" : "error"}">
+      <div class="source-card-head">
+        <span class="source-name">${escapeHtml(name)}</span>
+        <span class="badge ${ok ? "green" : "red"}">${ok ? "ONLINE" : I18n.t("sources.badge.offline")}</span>
+      </div>
+      ${
+        ok
+          ? `${statHtml}<p class="note related-conditions-note">${I18n.t(noteKey)}</p>`
+          : `<p class="empty-hint">${I18n.t("sources.card.error")}</p>`
+      }
+    </div>`;
+}
+
 // The last-fetched Promise.allSettled results, kept so a language toggle can
 // re-render the same data in the new language (renderFromLastFetch) without
-// re-hitting the four live feeds — some unofficial/undocumented (see
+// re-hitting the six live feeds — some unofficial/undocumented (see
 // docs/adr/0001, docs/adr/0004) — on every toggle click.
 let lastFetch = null;
 
 function renderFromLastFetch() {
   if (!lastFetch) return;
-  const { bmaRes, longdoRes, traffyRes, thaiwaterRes } = lastFetch;
+  const { bmaRes, longdoRes, traffyRes, thaiwaterRes, floodCentreRes, gistdaRes } = lastFetch;
   const el = document.getElementById("source-cards");
   const statusEl = document.getElementById("last-updated");
 
@@ -157,10 +175,30 @@ function renderFromLastFetch() {
     cards.push(renderStationCard(I18n.t("sources.thaiwater.name"), false));
   }
 
+  const fcName = I18n.t("sources.floodcentre.name");
+  cards.push(
+    renderSimpleCard(
+      fcName,
+      floodCentreRes.status === "fulfilled",
+      floodCentreRes.status === "fulfilled"
+        ? `<div class="source-stats"><div><span class="stat-num">${floodCentreRes.value.items.length}</span><span class="stat-label">${I18n.t("sources.stat.roadslisted")}</span></div></div>`
+        : "",
+      "sources.floodcentre.note"
+    )
+  );
+  cards.push(
+    renderSimpleCard(
+      I18n.t("sources.gistda.name"),
+      gistdaRes.status === "fulfilled",
+      "",
+      "sources.gistda.note"
+    )
+  );
+
   el.innerHTML = cards.join("");
 
   const now = I18n.fmtTime(lastFetch.fetchedAt);
-  const failed = [bmaRes, longdoRes, traffyRes, thaiwaterRes].some((r) => r.status !== "fulfilled");
+  const failed = [bmaRes, longdoRes, traffyRes, thaiwaterRes, floodCentreRes, gistdaRes].some((r) => r.status !== "fulfilled");
   statusEl.textContent = failed ? I18n.t("sources.status.failed", { time: now }) : I18n.t("sources.status.updated", { time: now });
   statusEl.classList.toggle("warning", failed);
 }
@@ -169,13 +207,17 @@ async function refresh() {
   const statusEl = document.getElementById("last-updated");
   statusEl.textContent = I18n.t("sources.status.updating");
 
-  const [bmaRes, longdoRes, traffyRes, thaiwaterRes] = await Promise.allSettled([
+  const [bmaRes, longdoRes, traffyRes, thaiwaterRes, floodCentreRes, gistdaRes] = await Promise.allSettled([
     FD.loadBMA(),
     FD.loadLongdo(),
     FD.loadTraffy(),
     FD.loadThaiWaterCanal(),
+    FD.loadFloodCentreSheet(),
+    FD.probeGistdaTiles().then((ok) => {
+      if (!ok) throw new Error("GISTDA tile host unavailable");
+    }),
   ]);
-  lastFetch = { bmaRes, longdoRes, traffyRes, thaiwaterRes, fetchedAt: new Date() };
+  lastFetch = { bmaRes, longdoRes, traffyRes, thaiwaterRes, floodCentreRes, gistdaRes, fetchedAt: new Date() };
   renderFromLastFetch();
 }
 
