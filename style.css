@@ -498,67 +498,6 @@ h1, h2 { margin: 0; }
   text-align: right;
 }
 .road-item .age.stale { color: var(--stamp-amber); }
-.road-item.selected { background: var(--board-panel); box-shadow: inset 2px 0 0 var(--brass); }
-
-.add-btn, .remove-btn {
-  cursor: pointer;
-  background: var(--board-panel);
-  border: 1px solid var(--board-line);
-  color: var(--ink-dim);
-  border-radius: 0;
-  width: 22px;
-  height: 22px;
-  line-height: 1;
-  font-family: var(--font-data);
-  font-size: 0.95rem;
-  flex-shrink: 0;
-}
-.add-btn:hover { border-color: var(--brass); color: var(--paper); }
-.remove-btn:hover { border-color: var(--stamp-red); color: var(--stamp-red); }
-
-.route-list .route-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 7px 4px;
-  font-size: 0.82rem;
-  border-bottom: 1px dashed var(--board-line);
-}
-.route-list .route-item:last-child { border-bottom: none; }
-.route-item-main {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  cursor: pointer;
-}
-.route-item .name { font-family: var(--font-body); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.route-item .depth { color: var(--ink-dim); font-family: var(--font-data); font-size: 0.74rem; white-space: nowrap; }
-.route-item .age { color: var(--ink-dim); font-family: var(--font-data); font-size: 0.7rem; white-space: nowrap; margin-left: auto; }
-.route-item .age.stale { color: var(--stamp-amber); }
-
-/* ---- Stamped verdict ---- */
-
-.verdict {
-  margin-top: 12px;
-  padding: 11px 14px;
-  border-radius: 0;
-  font-family: var(--font-display);
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  font-size: 0.85rem;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  background: var(--board-panel);
-  box-shadow: var(--hard-shadow);
-}
-.verdict.hidden { display: none; }
-.verdict.ok { border: 4px double var(--stamp-chalk); color: var(--paper); }
-.verdict.caution { border: 4px double var(--stamp-amber); color: var(--stamp-amber); }
-.verdict.blocked { border: 4px double var(--stamp-red); color: var(--stamp-red); }
 
 /* ---- Stamp badges (replaces tinted pills) ---- */
 
@@ -600,18 +539,6 @@ h1, h2 { margin: 0; }
   line-height: 1.45;
 }
 .leaflet-popup-content b { display: block; margin-bottom: 2px; font-family: var(--font-display); text-transform: uppercase; letter-spacing: 0.03em; font-size: 0.8rem; }
-.popup-add-btn {
-  margin-top: 6px;
-  padding: 4px 10px;
-  border-radius: 0;
-  border: 1px solid var(--brass);
-  background: var(--board);
-  color: var(--brass);
-  cursor: pointer;
-  font-family: var(--font-data);
-  font-size: 0.72rem;
-  text-transform: uppercase;
-}
 
 /* ---- Sources / Data & Freshness page ---- */
 
@@ -703,6 +630,60 @@ h1, h2 { margin: 0; }
   font-size: 1.1rem;
   color: var(--paper);
   margin: 4px 0 0;
+}
+
+ /* Map chips: the always-visible controls (near me + layer toggles) float over
+   the map so they never hide inside the bottom sheet. */
+.map-chips {
+  position: absolute;
+  top: 10px;
+  left: 54px; /* clear of Leaflet's zoom control */
+  right: 10px;
+  z-index: 900;
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  pointer-events: none;
+}
+.map-chips::-webkit-scrollbar { display: none; }
+.map-chip {
+  pointer-events: auto;
+  flex-shrink: 0;
+  min-height: 36px;
+  padding: 0 12px;
+  background: var(--board-panel);
+  color: var(--ink);
+  border: 1px solid var(--board-line);
+  border-radius: 0;
+  font-family: var(--font-data);
+  font-size: 0.72rem;
+  cursor: pointer;
+  box-shadow: var(--hard-shadow);
+  opacity: 0.8;
+}
+.map-chip.active { opacity: 1; border-bottom: 2px solid var(--brass); color: var(--paper); }
+.map-chip.near-me { background: var(--brass); color: #1c1815; border-color: var(--brass); opacity: 1; font-weight: 500; }
+.map-notes {
+  position: absolute;
+  top: 54px;
+  left: 54px;
+  right: 10px;
+  z-index: 900;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  pointer-events: none;
+}
+.map-notes > p:not([hidden]) {
+  pointer-events: auto;
+  align-self: flex-start;
+  margin: 0;
+  padding: 6px 10px;
+  background: var(--board-panel);
+  border: 1px solid var(--board-line);
+  box-shadow: var(--hard-shadow);
+  max-width: 100%;
 }
 
 /* Mobile: the map fills the screen and the sidebar becomes a bottom sheet.

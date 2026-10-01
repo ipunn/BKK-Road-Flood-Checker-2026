@@ -57,15 +57,6 @@ falling within the same freshness window. Corroborated reports are merged into
 a single map marker instead of shown as separate pins, with each contributing
 report listed as evidence.
 
-**Camera pin**:
-A BMA public traffic-camera location shown on the map, independent of any
-flood report. It carries no passability status of its own — it links out to
-BMA's viewer (generic homepage only; no BMA camera supports a link to its own
-specific view) rather than showing a status or contributing to a route
-verdict. Sourced from a vendored snapshot, not a live fetch — see ADR-0002.
-_Avoid_: CCTV point, camera marker (this app's map already uses "marker" for
-report pins — "pin" keeps the two visually and conceptually distinct)
-
 **Passability status**:
 The clear / caution / blocked / unknown verdict assigned to a single report or
 to a selected route (the worst status among its reports). Carried by ink color
@@ -76,8 +67,8 @@ _Avoid_: Severity, risk level
 Upstream/contextual data (e.g. dam levels, canal discharge, rainfall, GISTDA's
 24 h flood-warning polygons (the forecast layers are not shipped) and BMA flood-centre's flooded-roads sheet) shown
 for awareness only — each with a visible source and age label (or an explicit
-"update time unknown" where the source gives none), off by default behind its
-own toggle — never a Sensor report, Event report, or Citizen report.
+"update time unknown" where the source gives none), shown by default behind its
+own toggle (all on by default, switchable off) — never a Sensor report, Event report, or Citizen report.
 It carries no Passability status, is never an input to a route verdict, and
 is never a `mergeCorroboration` contributor. Exists to give drivers *some*
 signal when report coverage is missing (most notably during a BMA outage),
@@ -87,7 +78,7 @@ not an outage fallback UI. The first instance, ThaiWater canal water-level
 stations (`data.js` `loadThaiWaterCanal`), relies on an undocumented public
 fallback API key — see ADR-0004. A second instance, BMA's flood-centre
 flooded-roads Google Sheet (`data.js` `loadFloodCentreSheet`), is fetched on
-first toggle, drawn as a diamond marker, and labelled "update time unknown"
+load (all Related-condition layers are on by default and switchable off), drawn as a diamond marker, and labelled "update time unknown"
 because the sheet has no per-row timestamp; its coordinates are approximate and
 its note text is BMA's own, shown verbatim and never parsed into a status.
 _Avoid_: Leading indicator, upstream data (both used informally during

@@ -11,7 +11,7 @@ class of trade-off as Traffy Fondue (ADR-0001) and ThaiWater's key (ADR-0004). T
 tile host sends CORS headers; GISTDA's JSON API, which holds the generation
 timestamps, does not (`.scratch/report-photos-and-area-flood/gistda-polygons-finding.md`).
 
-Accepted: ship **only the 24 h warning layer**, off by default, as a Related
+Accepted: ship **only the 24 h warning layer**, on by default (a chip switches it off), as a Related
 condition (no Passability status, never a route-verdict or `mergeCorroboration`
 input). Because the app cannot read when a tile was generated, the legend says so
 ("area-level; update time unknown"). The forecast layers are not shipped: their

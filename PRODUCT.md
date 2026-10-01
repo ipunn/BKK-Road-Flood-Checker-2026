@@ -43,7 +43,7 @@ must never present old data as if it were current.
   public feeds directly from the browser.
 - Free hosting via GitHub Pages; the user has no deployment background, so anything
   requiring server infra, paid services, or CLI-only workflows is out of scope.
-- Two pages: a map + route-picker, and a data-sources/freshness page.
+- Two pages: a map with a status summary, and a data-sources/freshness page.
 - Bilingual-leaning Thai-first copy (the primary UI language is Thai; the working
   title is English).
 

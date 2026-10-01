@@ -1,11 +1,11 @@
 // BKK Road Flood 2026 — map page controller.
 // Data fetching/classification lives in data.js (window.FloodData); this file only
-// renders the map, sidebar, route picker, and freshness filter.
+// renders the map, sidebar, and freshness filter.
 
 const FD = window.FloodData;
 const I18n = window.I18n;
 
-let map, markersLayer, camerasLayer, canalMarkersLayer, floodCentreLayer, gistdaLayer;
+let map, markersLayer, canalMarkersLayer, floodCentreLayer, gistdaLayer;
 let floodCentreItems = []; // BMA flood-centre flooded-roads Related conditions — never a report
 let markersByKey = new Map();
 let canalMarkersByKey = new Map();
@@ -13,7 +13,6 @@ let allPoints = []; // every currently-active point, before the freshness filter
 let canalHistory = new Map(); // station key -> previous reading, for trend (FloodData.withCanalTrend)
 let canalStations = []; // ThaiWater canal water-level Related conditions — never a report, see CONTEXT.md
 const RELATED_CONDITIONS_LIMIT = 5;
-let selectedKeys = new Set();
 let maxAgeMinutes = 60; // freshness filter — only show points reported within this window
 let reportPhotos = []; // Traffy Report photo candidates for the "Latest photos" gallery — independent of the freshness filter
 const GALLERY_PAGE = 12;
@@ -40,9 +39,8 @@ function initMap() {
     attribution: "&copy; OpenStreetMap contributors",
   }).addTo(map);
   markersLayer = L.layerGroup().addTo(map);
-  camerasLayer = L.layerGroup(); // not added to map — off by default, see CONTEXT.md "Camera pin"
-  floodCentreLayer = L.layerGroup(); // off by default, toggle-loaded like camerasLayer
-  canalMarkersLayer = L.layerGroup(); // not added to map — off by default, same pattern as camerasLayer
+  floodCentreLayer = L.layerGroup(); // off by default, fetched on first show
+  canalMarkersLayer = L.layerGroup(); // shown by default; the chip toggles it
 }
 
 // A wave glyph (never the plain circleMarker dot road/camera points use) so a
@@ -155,46 +153,6 @@ function flyToCanalStation(key) {
   map.flyTo([s.lat, s.lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
   const marker = canalMarkersByKey.get(key);
   if (marker) marker.openPopup();
-}
-
-// Camera pins are a static snapshot (docs/adr/0002), fetched once — not part
-// of the live refresh cycle the three report sources use. They carry no
-// Passability status, aren't affected by the freshness filter, aren't
-// merged, and can't be added to a route (see CONTEXT.md "Camera pin").
-async function loadCameraPins() {
-  let cameras;
-  try {
-    const res = await fetch("cameras.json");
-    cameras = await res.json();
-  } catch (err) {
-    console.error("Failed to load cameras.json", err);
-    return false; // caller must be able to retry, not treat this as permanently loaded
-  }
-  for (const cam of cameras) {
-    if (cam.lat == null || cam.lng == null || isNaN(cam.lat) || isNaN(cam.lng)) continue;
-    const marker = L.circleMarker([cam.lat, cam.lng], {
-      radius: 5,
-      color: "#ffffff",
-      weight: 1.5,
-      fillColor: "#b8863b", // matches --brass in style.css; Leaflet's SVG renderer sets this as a raw attribute, not via CSS, so var() won't resolve here
-      fillOpacity: 0.9,
-    });
-    // A function, not a string: camera pins are loaded once and never
-    // re-rendered on a language toggle (unlike the report/canal markers,
-    // which are rebuilt from live data every 3 min anyway), so the popup
-    // content has to be resolved fresh on each open to pick up the current
-    // language instead of baking in whatever was active at load time.
-    marker.bindPopup(
-      () => `
-      <b>${escapeHtml(cam.label)}</b>
-      ${escapeHtml(cam.sublabel || "")}<br/>
-      <span class="citizen-note">${I18n.t("camera.popup.note")}</span><br/>
-      <a href="https://cpudapp.bangkok.go.th/bmatraffic/" target="_blank" rel="noopener noreferrer">${I18n.t("camera.popup.link")}</a>
-    `
-    );
-    camerasLayer.addLayer(marker);
-  }
-  return true;
 }
 
 function escapeHtml(s) {
@@ -549,14 +507,9 @@ function renderMarkers() {
       ${citizen ? `<p class="citizen-note">${I18n.t("citizen.note")}</p>` : ""}
       ${(p.contributors || [p]).length <= 1 ? photoThumbHtml(p.photoUrl) : ""}
       ${contributorsHtml(p)}
-      <br/><button class="popup-add-btn" data-key="${p.key}">${I18n.t("popup.addbtn")}</button>
     `,
       { maxWidth: 340 }
     );
-    marker.on("popupopen", (ev) => {
-      const btn = ev.popup.getElement().querySelector(".popup-add-btn");
-      if (btn) btn.addEventListener("click", () => toggleSelect(p.key));
-    });
     markersLayer.addLayer(marker);
     markersByKey.set(p.key, marker);
   }
@@ -583,16 +536,13 @@ function renderRoadList(filterText) {
     .map((p) => {
       const stale = FD.ageMinutes(p.updated) > FD.STALE_WARN_MIN;
       return `
-      <div class="road-item ${selectedKeys.has(p.key) ? "selected" : ""}" data-key="${p.key}">
+      <div class="road-item" data-key="${p.key}">
         <span class="road-item-main" data-key="${p.key}" title="${I18n.t("flyto.title")}">
           ${statusDotHtml(p.status, isCitizenOnly(p), hasUnverifiedPhoto(p))}
           <span class="name">${escapeHtml(p.label)}</span>
         </span>
         <span class="depth">${p.depthCm != null ? I18n.fmtDepth(p.depthCm) : "?"}</span>
         <span class="age ${stale ? "stale" : ""}">${I18n.timeAgo(p.updated)}</span>
-        <button class="add-btn" data-key="${p.key}" title="${I18n.t("road.addremove.title")}">${
-          selectedKeys.has(p.key) ? "−" : "+"
-        }</button>
       </div>`;
     })
     .join("");
@@ -600,74 +550,6 @@ function renderRoadList(filterText) {
   listEl.querySelectorAll(".road-item-main").forEach((el) => {
     el.addEventListener("click", () => flyToPoint(el.dataset.key));
   });
-  listEl.querySelectorAll(".add-btn").forEach((el) => {
-    el.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      toggleSelect(el.dataset.key);
-    });
-  });
-}
-
-function toggleSelect(key) {
-  if (selectedKeys.has(key)) selectedKeys.delete(key);
-  else selectedKeys.add(key);
-  renderRoadList(document.getElementById("road-search").value);
-  renderRoute();
-}
-
-function renderRoute() {
-  const routeListEl = document.getElementById("route-list");
-  const verdictEl = document.getElementById("route-verdict");
-  const selected = allPoints.filter((p) => selectedKeys.has(p.key));
-
-  if (selected.length === 0) {
-    routeListEl.innerHTML = `<p class="empty-hint">${I18n.t("route.list.empty")}</p>`;
-    verdictEl.classList.add("hidden");
-    return;
-  }
-
-  routeListEl.innerHTML = selected
-    .map((p) => {
-      const stale = FD.ageMinutes(p.updated) > FD.STALE_WARN_MIN;
-      return `
-      <div class="route-item">
-        <span class="route-item-main" data-key="${p.key}" title="${I18n.t("flyto.title")}">
-          ${statusDotHtml(p.status, isCitizenOnly(p), hasUnverifiedPhoto(p))}
-          <span class="name">${escapeHtml(p.label)}</span>
-          <span class="depth">${p.depthCm != null ? I18n.fmtDepth(p.depthCm) : "?"}</span>
-          <span class="age ${stale ? "stale" : ""}">${I18n.timeAgo(p.updated)}</span>
-        </span>
-        <button class="remove-btn" data-key="${p.key}" title="${I18n.t("route.remove.title")}">&times;</button>
-      </div>`;
-    })
-    .join("");
-
-  routeListEl.querySelectorAll(".route-item-main").forEach((el) => {
-    el.addEventListener("click", () => flyToPoint(el.dataset.key));
-  });
-  routeListEl.querySelectorAll(".remove-btn").forEach((btn) => {
-    btn.addEventListener("click", (ev) => {
-      ev.stopPropagation();
-      toggleSelect(btn.dataset.key);
-    });
-  });
-
-  const worst = selected.reduce((a, b) => (FD.STATUS_RANK[b.status] > FD.STATUS_RANK[a.status] ? b : a));
-  verdictEl.classList.remove("hidden", "ok", "caution", "blocked");
-  const badge = `<span class="badge ${worst.status}">${FD.STATUS_BADGE[worst.status]}</span>`;
-  if (worst.status === "red") {
-    verdictEl.classList.add("blocked");
-    verdictEl.innerHTML = `${badge}${I18n.t("verdict.blocked", { road: escapeHtml(worst.label) })}`;
-  } else if (worst.status === "yellow" || worst.status === "gray") {
-    verdictEl.classList.add("caution");
-    verdictEl.innerHTML =
-      worst.status === "yellow"
-        ? `${badge}${I18n.t("verdict.caution", { road: escapeHtml(worst.label), depth: worst.depthCm ?? "?" })}`
-        : `${badge}${I18n.t("verdict.unknown", { road: escapeHtml(worst.label) })}`;
-  } else {
-    verdictEl.classList.add("ok");
-    verdictEl.innerHTML = `${badge}${I18n.t("verdict.clear")}`;
-  }
 }
 
 function setStatusLine(text, isWarning) {
@@ -737,7 +619,6 @@ async function refreshReports() {
 
   renderMarkers();
   renderRoadList(document.getElementById("road-search").value);
-  renderRoute();
   renderPhotoGallery();
   hideLoadingOverlay(); // no-op after the first successful cycle — see its own comment
 
@@ -813,24 +694,8 @@ function main() {
     sidebarToggle.setAttribute("aria-expanded", String(!expanded));
   });
 
-  const cameraToggle = document.getElementById("camera-toggle");
-  let cameraPinsLoaded = false;
-  cameraToggle.addEventListener("click", async () => {
-    const showing = cameraToggle.getAttribute("aria-pressed") === "true";
-    if (!showing && !cameraPinsLoaded) {
-      cameraPinsLoaded = await loadCameraPins(); // only true on success — retries on the next click if it failed
-    }
-    if (showing) {
-      map.removeLayer(camerasLayer);
-    } else {
-      camerasLayer.addTo(map);
-    }
-    cameraToggle.setAttribute("aria-pressed", String(!showing));
-    cameraToggle.classList.toggle("active", !showing);
-  });
-
   // Flooded-roads sheet: one-time fetch on first toggle (retries on the next
-  // click if it failed), like camera pins. A failure only shows its own note.
+  // click if it failed). A failure only shows its own note.
   const floodCentreToggle = document.getElementById("floodcentre-toggle");
   const floodCentreStatus = document.getElementById("floodcentre-status");
   floodCentreToggle.addEventListener("click", async () => {
@@ -928,8 +793,7 @@ function main() {
   // Canal markers are already kept up to date by refreshThaiWater() on the
   // normal refresh cycle regardless of toggle state (the sidebar's Related
   // conditions panel needs the data either way) — this toggle only controls
-  // the map layer's visibility, unlike camera pins which are a one-time
-  // fetch triggered by the toggle itself.
+  // the map layer's visibility, .
   const canalToggle = document.getElementById("canal-toggle");
   canalToggle.addEventListener("click", () => {
     const showing = canalToggle.getAttribute("aria-pressed") === "true";
@@ -948,14 +812,16 @@ function main() {
   document.addEventListener("i18n:change", () => {
     renderMarkers();
     renderRoadList(document.getElementById("road-search").value);
-    renderRoute();
-    renderPhotoGallery();
+      renderPhotoGallery();
     renderRelatedConditions();
     renderCanalMarkers();
     renderFloodCentreMarkers();
     if (gistdaToggle.getAttribute("aria-pressed") === "true") gistdaRenderLegend();
     updateStatusLine();
   });
+
+  // Every layer is on by default; the chips only switch them off.
+  [floodCentreToggle, gistdaToggle, canalToggle].forEach((t) => t.click());
 
   refreshAll();
   setInterval(refreshAll, FD.REFRESH_MS);

@@ -1,5 +1,5 @@
 ---
-status: accepted
+status: superseded — the camera layer was removed (BMA's viewer links were dead)
 ---
 
 # Vendor Camera pin locations as a static snapshot, not a live fetch
