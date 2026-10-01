@@ -517,14 +517,31 @@
     return { points, eventCount: events.length, floodEventCount };
   }
 
+  // Flood-only query reaches back ~25 h (vs ~13 h plain) — see ADR-0001
+  // addendum. Both the parameter and the plain call are undocumented, so the
+  // plain call is the fallback; if both fail the error propagates and the
+  // source shows as unavailable.
+  const TRAFFY_FLOOD_API = TRAFFY_API + "?problem_type=" + encodeURIComponent("น้ำท่วม");
+
   async function loadTraffy() {
-    return parseTraffy(await fetchJSON(TRAFFY_API), Date.now());
+    let geojson = null;
+    try {
+      const floodOnly = await fetchJSON(TRAFFY_FLOOD_API);
+      if (floodOnly && Array.isArray(floodOnly.features) && floodOnly.features.length) geojson = floodOnly;
+    } catch (e) {
+      // fall through to the plain call
+    }
+    if (!geojson) geojson = await fetchJSON(TRAFFY_API);
+    return parseTraffy(geojson, Date.now());
   }
 
   // Pure parser — `now` (ms) is a parameter so it's testable with fixtures.
   function parseTraffy(geojson, now) {
     const features = (geojson && geojson.features) || [];
     const points = [];
+    // Report photo candidates for the "Latest photos" gallery: independent of
+    // the verdict window (ADR-0007), so expired reports are kept here.
+    const photos = [];
     let floodTicketCount = 0;
 
     // A real citizen-uploaded photo gets a unique per-ticket URL (observed:
@@ -570,6 +587,20 @@
       const tsMs = parseDateMs(props.timestamp);
       const age = tsMs != null ? now - tsMs : Infinity;
       const expired = age > TRAFFY_FALLBACK_MS;
+
+      if (tsMs != null && isRealPhoto(props.photo_url)) {
+        photos.push({
+          key: `traffy-${props.ticket_id || f.id}`,
+          photoUrl: props.photo_url,
+          updated: ts,
+          tsMs,
+          place: props.address || props.subdistrict || "",
+          source: "Traffy Fondue",
+          lat,
+          lng,
+          resolved,
+        });
+      }
       if (resolved || expired) continue;
 
       const text = `${props.description || ""} ${props.address || ""}`;
@@ -590,7 +621,26 @@
       });
     }
 
-    return { points, ticketCount: features.length, floodTicketCount };
+    return { points, photos, ticketCount: features.length, floodTicketCount };
+  }
+
+  // Pure gallery logic for the "Latest photos" section: newest first, resolved
+  // tickets hidden, no freshness cap (a photo's age is shown, not filtered).
+  function buildPhotoGallery(photos, now, limit, offset) {
+    const sorted = (photos || [])
+      .filter((p) => !p.resolved)
+      .sort((a, b) => b.tsMs - a.tsMs);
+    const items = sorted.slice(offset, offset + limit).map((p) => ({
+      key: p.key,
+      photoUrl: p.photoUrl,
+      updated: p.updated,
+      ageMinutes: (now - p.tsMs) / 60000,
+      place: p.place,
+      source: p.source,
+      lat: p.lat,
+      lng: p.lng,
+    }));
+    return { items, hasMore: offset + limit < sorted.length };
   }
 
   // Minimal RFC-4180 CSV reader: quoted fields, "" escapes, commas/newlines
@@ -839,6 +889,7 @@
     loadLongdo,
     loadTraffy,
     parseTraffy,
+    buildPhotoGallery,
     parseLongdo,
     parseCanalStations,
     loadThaiWaterCanal,

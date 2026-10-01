@@ -15,6 +15,9 @@ let canalStations = []; // ThaiWater canal water-level Related conditions — ne
 const RELATED_CONDITIONS_LIMIT = 5;
 let selectedKeys = new Set();
 let maxAgeMinutes = 60; // freshness filter — only show points reported within this window
+let reportPhotos = []; // Traffy Report photo candidates for the "Latest photos" gallery — independent of the freshness filter
+const GALLERY_PAGE = 12;
+let galleryShown = GALLERY_PAGE;
 let lastFetchOk = { bma: false, longdo: false, traffy: false, thaiwater: false };
 // ThaiWater's canal-level feed measured ~10x slower than Longdo/Traffy and on
 // par with or slower than BMA (see .scratch/traffy-fondue-citizen-reports/
@@ -268,6 +271,55 @@ function flyToPoint(key) {
   map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
   const marker = markersByKey.get(key);
   if (marker) marker.openPopup();
+}
+
+// "Latest photos" gallery. Deliberately ignores maxAgeMinutes (ADR-0007): a
+// photo is labelled by its age, never filtered by the verdict window, and it
+// never changes Passability status.
+function renderPhotoGallery() {
+  const el = document.getElementById("photo-gallery");
+  const moreBtn = document.getElementById("photo-gallery-more");
+  const { items, hasMore } = FD.buildPhotoGallery(reportPhotos, Date.now(), galleryShown, 0);
+  const incomplete = !lastFetchOk.traffy
+    ? `<p class="empty-hint">${I18n.t("gallery.incomplete")}</p>`
+    : "";
+  if (!items.length) {
+    el.innerHTML = incomplete || `<p class="empty-hint">${I18n.t("gallery.empty")}</p>`;
+  } else {
+    el.innerHTML = incomplete + items
+      .map((it) => {
+        const url = /^https?:\/\//i.test(it.photoUrl) ? it.photoUrl : "";
+        return `<button type="button" class="gallery-item" data-key="${escapeHtml(it.key)}">
+          <img src="${escapeHtml(url)}" alt="${I18n.t("report.photo.alt")}" loading="lazy"/>
+          <span class="gallery-age">${I18n.timeAgo(it.updated)}</span>
+          <span class="gallery-place">${escapeHtml(it.place)}</span>
+          <span class="gallery-source">${escapeHtml(it.source)}</span>
+        </button>`;
+      })
+      .join("");
+    el.querySelectorAll(".gallery-item").forEach((btn) => {
+      btn.addEventListener("click", () => flyToGalleryItem(btn.dataset.key));
+    });
+  }
+  moreBtn.hidden = !hasMore;
+}
+
+// Pans to the report; opens its marker popup when it has one, else (older
+// than the verdict window, so no marker) a plain popup with the photo.
+function flyToGalleryItem(key) {
+  const it = reportPhotos.find((p) => p.key === key);
+  if (!it) return;
+  map.flyTo([it.lat, it.lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
+  // A corroborated marker's key joins its contributors' keys with "+".
+  const markerKey = [...markersByKey.keys()].find((k) => k.split("+").includes(key));
+  if (markerKey) {
+    markersByKey.get(markerKey).openPopup();
+    return;
+  }
+  L.popup()
+    .setLatLng([it.lat, it.lng])
+    .setContent(`<strong>${escapeHtml(it.place)}</strong><br>${escapeHtml(it.source)} &middot; ${I18n.timeAgo(it.updated)}${photoThumbHtml(it.photoUrl)}`)
+    .openOn(map);
 }
 
 // Bright, saturated solid colors — legible at a glance on the light basemap.
@@ -548,10 +600,12 @@ async function refreshReports() {
     ...(lastFetchOk.traffy ? traffyRes.value.points : []),
   ];
   allPoints = FD.mergeCorroboration(rawPoints);
+  reportPhotos = lastFetchOk.traffy ? traffyRes.value.photos : [];
 
   renderMarkers();
   renderRoadList(document.getElementById("road-search").value);
   renderRoute();
+  renderPhotoGallery();
   hideLoadingOverlay(); // no-op after the first successful cycle — see its own comment
 
   updateStatusLine();
@@ -588,6 +642,10 @@ function main() {
   document.getElementById("road-search").addEventListener("input", (e) => {
     renderRoadList(e.target.value);
     renderRelatedConditions();
+  });
+  document.getElementById("photo-gallery-more").addEventListener("click", () => {
+    galleryShown += GALLERY_PAGE;
+    renderPhotoGallery();
   });
   document.getElementById("refresh-btn").addEventListener("click", refreshAll);
   document.getElementById("freshness-filter").addEventListener("change", (e) => {
@@ -674,6 +732,7 @@ function main() {
     renderMarkers();
     renderRoadList(document.getElementById("road-search").value);
     renderRoute();
+    renderPhotoGallery();
     renderRelatedConditions();
     renderCanalMarkers();
     renderFloodCentreMarkers();

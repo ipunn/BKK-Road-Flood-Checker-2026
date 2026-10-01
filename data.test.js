@@ -482,3 +482,97 @@ test("parseFloodCentreSheet items are Related-condition-shaped: no status, depth
   assert.equal(item.depthCm, undefined);
   assert.equal(item.updated, undefined);
 });
+
+// ---- Latest photos gallery (ticket 03) ----
+
+function photoFixture() {
+  // NOW is 2026-10-01 ~12:00 Bangkok; timestamps below are minutes/hours old.
+  return FD.parseTraffy(
+    {
+      features: [
+        traffyFeature({ id: "new", timestamp: "2026-10-01 11:50:00", photo_url: "https://x/new.jpg" }),
+        traffyFeature({ id: "old", timestamp: "2026-10-01 01:00:00", photo_url: "https://x/old.jpg", lat: 13.76 }),
+        traffyFeature({ id: "mid", timestamp: "2026-10-01 08:00:00", photo_url: "https://x/mid.jpg", lat: 13.77 }),
+        traffyFeature({ id: "res", timestamp: "2026-10-01 11:00:00", state: "เสร็จสิ้น", photo_url: "https://x/res.jpg", lat: 13.78 }),
+        traffyFeature({ id: "stock", timestamp: "2026-10-01 11:40:00", photo_url: STOCK_PHOTO, lat: 13.79 }),
+        traffyFeature({ id: "nobkk", lat: 18.79, lng: 98.98, photo_url: "https://x/n.jpg" }),
+        traffyFeature({ id: "notflood", type: ["ถนน"], photo_url: "https://x/f.jpg", lat: 13.74 }),
+      ],
+    },
+    NOW_MS
+  ).photos;
+}
+
+test("buildPhotoGallery sorts newest first and includes reports older than the verdict window", () => {
+  const { items } = FD.buildPhotoGallery(photoFixture(), NOW_MS, 12, 0);
+  assert.deepEqual(items.map((i) => i.key), ["traffy-new", "traffy-mid", "traffy-old"]);
+  assert.ok(items[2].ageMinutes > FD.TRAFFY_FALLBACK_MS / 60000); // older than 3h, still listed
+  assert.equal(items[0].photoUrl, "https://x/new.jpg");
+  assert.equal(items[0].place, "ถนนทดสอบ");
+  assert.equal(items[0].source, "Traffy Fondue");
+  assert.equal(items[0].lat, 13.7563);
+});
+
+test("buildPhotoGallery excludes resolved/cancelled tickets and placeholder images", () => {
+  const keys = FD.buildPhotoGallery(photoFixture(), NOW_MS, 12, 0).items.map((i) => i.key);
+  assert.ok(!keys.includes("traffy-res"));
+  assert.ok(!keys.includes("traffy-stock"));
+  assert.ok(!keys.includes("traffy-nobkk"));
+  assert.ok(!keys.includes("traffy-notflood"));
+});
+
+test("buildPhotoGallery pages by limit/offset and reports whether more exist", () => {
+  const photos = photoFixture();
+  const p1 = FD.buildPhotoGallery(photos, NOW_MS, 2, 0);
+  assert.deepEqual(p1.items.map((i) => i.key), ["traffy-new", "traffy-mid"]);
+  assert.equal(p1.hasMore, true);
+  const p2 = FD.buildPhotoGallery(photos, NOW_MS, 2, 2);
+  assert.deepEqual(p2.items.map((i) => i.key), ["traffy-old"]);
+  assert.equal(p2.hasMore, false);
+});
+
+// ---- Flood-only fetch with fallback (ticket 04) ----
+
+async function withUrlRoutedNetwork(routes, fn) {
+  const origNow = Date.now;
+  const origFetch = globalThis.fetch;
+  const calls = [];
+  Date.now = () => NOW_MS;
+  globalThis.fetch = async (url) => {
+    calls.push(url);
+    const r = routes(url);
+    if (r instanceof Error) throw r;
+    return r;
+  };
+  try {
+    return { result: await fn(), calls };
+  } finally {
+    Date.now = origNow;
+    globalThis.fetch = origFetch;
+  }
+}
+const okJson = (body) => ({ ok: true, json: async () => body });
+
+test("loadTraffy requests the flood-only query first", async () => {
+  const { calls } = await withUrlRoutedNetwork(() => okJson(traffyFixture), () => FD.loadTraffy());
+  assert.equal(calls.length, 1);
+  assert.match(calls[0], /problem_type=/);
+});
+
+test("loadTraffy falls back to the plain call when the flood-only query fails or is empty", async () => {
+  for (const bad of [new Error("net"), { ok: false, status: 500 }, okJson({ features: [] }), okJson({})]) {
+    const { result, calls } = await withUrlRoutedNetwork(
+      (url) => (/problem_type=/.test(url) ? bad : okJson(traffyFixture)),
+      () => FD.loadTraffy()
+    );
+    assert.equal(calls.length, 2);
+    assert.doesNotMatch(calls[1], /problem_type=/);
+    assert.equal(result.points.length, 5);
+  }
+});
+
+test("loadTraffy rejects when both calls fail so the source shows as unavailable", async () => {
+  await assert.rejects(
+    withUrlRoutedNetwork(() => new Error("down"), () => FD.loadTraffy())
+  );
+});
