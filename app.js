@@ -64,11 +64,14 @@ const CANAL_WAVE_SVG =
   "</svg>";
 
 function canalStationIcon(waterLevelStatus) {
+  // Normal (green) stations are drawn smaller and faded (CSS) so the few at
+  // warning/critical stay the eye-catchers among ~256 stations.
+  const n = waterLevelStatus === "green" ? 9 : 14;
   return L.divIcon({
     className: `canal-wave-icon status-${waterLevelStatus || "neutral"}`,
     html: CANAL_WAVE_SVG,
-    iconSize: [14, 14],
-    iconAnchor: [7, 7],
+    iconSize: [n, n],
+    iconAnchor: [n / 2, n / 2],
   });
 }
 
@@ -118,13 +121,10 @@ function renderCanalMarkers() {
   canalMarkersByKey.clear();
   for (const s of canalStations) {
     if (s.lat == null || s.lng == null || isNaN(s.lat) || isNaN(s.lng)) continue;
-    // Most of the ~256 stations read "green" (normal) at any given time —
-    // showing all of them buries the handful worth a driver's attention
-    // under a wall of markers that say "nothing to see here." A green
-    // station is still fetched/available (e.g. for a future station-search
-    // feature), just not drawn on the map by default.
-    if (s.waterLevelStatus === "green") continue;
-    const marker = L.marker([s.lat, s.lng], { icon: canalStationIcon(s.waterLevelStatus) });
+    const marker = L.marker([s.lat, s.lng], {
+      icon: canalStationIcon(s.waterLevelStatus),
+      zIndexOffset: s.waterLevelStatus === "green" ? -500 : 0, // normal stations never cover a warning one
+    });
     marker.bindPopup(`
       <b>${escapeHtml(s.label)}</b><br/>
       ${I18n.fmtMeters(s.levelM.toFixed(2))} &middot; ${I18n.timeAgo(s.updated)}${canalDetailHtml(s)}<br/>

@@ -663,7 +663,27 @@ h1, h2 { margin: 0; }
   opacity: 0.8;
 }
 .map-chip.active { opacity: 1; border-bottom: 2px solid var(--brass); color: var(--paper); }
-.map-chip.near-me { background: var(--brass); color: #1c1815; border-color: var(--brass); opacity: 1; font-weight: 500; }
+/* Near me is an action, not a filter: a solid brass button with a pin glyph,
+   bottom-right of the map, visually apart from the layer chips up top. */
+.near-me-fab {
+  position: absolute;
+  right: 10px;
+  bottom: 32px; /* clear of Leaflet's attribution */
+  z-index: 900;
+  min-height: 44px;
+  padding: 0 16px 0 12px;
+  background: var(--brass);
+  color: #1c1815;
+  border: 2px solid #1c1815;
+  border-radius: 0;
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 3px 3px 0 rgba(0, 0, 0, 0.5);
+}
+.near-me-fab::before { content: "\25C9"; margin-right: 8px; font-size: 1.05rem; vertical-align: -1px; }
+.near-me-fab:hover { background: #c99649; }
 .map-notes {
   position: absolute;
   top: 54px;
@@ -873,3 +893,7 @@ h1, h2 { margin: 0; }
   cursor: pointer;
 }
 .district-count-chip:hover, .district-count-chip.active { border-color: var(--brass); color: var(--paper); }
+
+/* Normal-level canal stations: small and faded so warnings stand out. */
+.canal-wave-icon.status-green svg { width: 9px; height: 9px; }
+.canal-wave-icon.status-green { opacity: 0.55; }
