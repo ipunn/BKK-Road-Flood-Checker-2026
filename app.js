@@ -738,16 +738,20 @@ function main() {
     gistdaStatus.textContent = I18n.t("gistda.error");
     gistdaStatus.hidden = false;
   };
-  const gistdaRenderLegend = () => {
-    gistdaStatus.className = "gistda-legend";
-    // Compact on purpose: the full wording (area-level, update time unknown,
-    // not a road report) lives in the tooltip; "update time unknown" stays visible.
-    gistdaStatus.title = `${I18n.t("gistda.legend")} — ${I18n.t("gistda.note")}`;
-    gistdaStatus.innerHTML =
-      `<span>${I18n.t("gistda.legend.short")}</span>` +
-      `<span><i class="swatch" style="background:${FD.gistdaWarnStyle(1).fillColor}"></i>${I18n.t("gistda.watch")}</span>` +
-      `<span><i class="swatch" style="background:${FD.gistdaWarnStyle(2).fillColor}"></i>${I18n.t("gistda.warning")}</span>`;
-    gistdaStatus.hidden = false;
+  // No always-on legend: tapping a warning area opens a popup that says what
+  // it is (level, source, update time unknown, not a road report).
+  const gistdaPopup = (e) => {
+    const cls = e.layer && e.layer.properties ? e.layer.properties.class_risk : null;
+    const style = FD.gistdaWarnStyle(cls);
+    if (!style) return;
+    L.popup()
+      .setLatLng(e.latlng)
+      .setContent(
+        `<b>${I18n.t("gistda.popup." + style.label)}</b>` +
+          `${I18n.t("gistda.legend")}<br/>` +
+          `<span class="related-conditions-note">${I18n.t("gistda.note")}</span>`
+      )
+      .openOn(map);
   };
   const loadVectorGrid = () =>
     window.L.vectorGrid
@@ -781,13 +785,12 @@ function main() {
           vectorTileLayerStyles: {
             flood_warn: (props) => FD.gistdaWarnStyle(props.class_risk) || { fill: false, stroke: false },
           },
-          interactive: false,
-          pane: "overlayPane",
+          interactive: true,
         });
+        gistdaLayer.on("click", gistdaPopup);
       } catch (err) {
         console.error("Failed to load GISTDA warning layer", err);
         gistdaStatus.className = "empty-hint";
-        gistdaStatus.removeAttribute("title");
         gistdaShowError();
         return;
       }
@@ -797,7 +800,7 @@ function main() {
       gistdaStatus.hidden = true;
     } else {
       gistdaLayer.addTo(map);
-      gistdaRenderLegend();
+      gistdaStatus.hidden = true;
     }
     gistdaToggle.setAttribute("aria-pressed", String(!showing));
     gistdaToggle.classList.toggle("active", !showing);
@@ -829,7 +832,6 @@ function main() {
     renderRelatedConditions();
     renderCanalMarkers();
     renderFloodCentreMarkers();
-    if (gistdaToggle.getAttribute("aria-pressed") === "true") gistdaRenderLegend();
     updateStatusLine();
   });
 
