@@ -698,7 +698,17 @@ function main() {
   // click if it failed). A failure only shows its own note.
   const floodCentreToggle = document.getElementById("floodcentre-toggle");
   const floodCentreStatus = document.getElementById("floodcentre-status");
+  let floodCentreBusy = false; // ignore taps while the first fetch is in flight, so an early "off" tap can't be misread
   floodCentreToggle.addEventListener("click", async () => {
+    if (floodCentreBusy) return;
+    floodCentreBusy = true;
+    try {
+      await floodCentreToggleClick();
+    } finally {
+      floodCentreBusy = false;
+    }
+  });
+  async function floodCentreToggleClick() {
     const showing = floodCentreToggle.getAttribute("aria-pressed") === "true";
     if (!showing && floodCentreItems.length === 0) {
       try {
@@ -716,7 +726,7 @@ function main() {
     else floodCentreLayer.addTo(map);
     floodCentreToggle.setAttribute("aria-pressed", String(!showing));
     floodCentreToggle.classList.toggle("active", !showing);
-  });
+  }
 
   // GISTDA 24 h warning polygons: vector tiles, so Leaflet.VectorGrid is
   // loaded from the CDN only on first toggle (no build step, no API key).
