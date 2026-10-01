@@ -912,3 +912,19 @@ h1, h2 { margin: 0; }
 /* Normal-level canal stations: small and faded so warnings stand out. */
 .canal-wave-icon.status-green svg { width: 9px; height: 9px; }
 .canal-wave-icon.status-green { opacity: 0.55; }
+
+/* Report marker that carries a photo: a status-coloured disc with a camera glyph. */
+.photo-pin { background: transparent; border: none; }
+.photo-pin-disc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.photo-pin-disc.citizen { border-style: dashed; }
+.photo-pin-disc.unknown { opacity: 0.8; }
+.photo-pin-disc svg { display: block; }
