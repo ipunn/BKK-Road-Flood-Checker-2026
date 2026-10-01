@@ -740,11 +740,13 @@ function main() {
   };
   const gistdaRenderLegend = () => {
     gistdaStatus.className = "gistda-legend";
+    // Compact on purpose: the full wording (area-level, update time unknown,
+    // not a road report) lives in the tooltip; "update time unknown" stays visible.
+    gistdaStatus.title = `${I18n.t("gistda.legend")} — ${I18n.t("gistda.note")}`;
     gistdaStatus.innerHTML =
-      `<span>${I18n.t("gistda.legend")}</span>` +
+      `<span>${I18n.t("gistda.legend.short")}</span>` +
       `<span><i class="swatch" style="background:${FD.gistdaWarnStyle(1).fillColor}"></i>${I18n.t("gistda.watch")}</span>` +
-      `<span><i class="swatch" style="background:${FD.gistdaWarnStyle(2).fillColor}"></i>${I18n.t("gistda.warning")}</span>` +
-      `<span>${I18n.t("gistda.note")}</span>`;
+      `<span><i class="swatch" style="background:${FD.gistdaWarnStyle(2).fillColor}"></i>${I18n.t("gistda.warning")}</span>`;
     gistdaStatus.hidden = false;
   };
   const loadVectorGrid = () =>
@@ -785,6 +787,7 @@ function main() {
       } catch (err) {
         console.error("Failed to load GISTDA warning layer", err);
         gistdaStatus.className = "empty-hint";
+        gistdaStatus.removeAttribute("title");
         gistdaShowError();
         return;
       }

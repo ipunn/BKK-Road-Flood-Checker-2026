@@ -897,3 +897,20 @@ h1, h2 { margin: 0; }
 /* Normal-level canal stations: small and faded so warnings stand out. */
 .canal-wave-icon.status-green svg { width: 9px; height: 9px; }
 .canal-wave-icon.status-green { opacity: 0.55; }
+
+/* GISTDA legend: a compact strip bottom-left of the map, clear of the Near me button. */
+#gistda-status {
+  position: absolute;
+  left: 10px;
+  bottom: 32px;
+  z-index: 900;
+  max-width: calc(100% - 190px);
+  margin: 0;
+  padding: 5px 8px;
+  gap: 4px 10px;
+  font-size: 0.68rem;
+  background: var(--board-panel);
+  border: 1px solid var(--board-line);
+  box-shadow: var(--hard-shadow);
+}
+#gistda-status[hidden] { display: none; }
