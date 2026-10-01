@@ -72,6 +72,8 @@ function canalStationIcon(waterLevelStatus) {
 // Passability status, not merged, not selectable into a route, same as
 // camera pins. Rebuilt on every ThaiWater refresh so the layer (whether
 // currently shown or not) always reflects the latest fetch.
+const CANAL_TREND_GLYPH = { rising: "▲", falling: "▼", steady: "●" };
+
 // Trend + margin-to-critical lines shared by the popup and sidebar row.
 // Both are omitted (not guessed) when the data to compute them is missing.
 function canalDetailHtml(s) {
@@ -251,7 +253,7 @@ function renderRelatedConditions() {
         <span class="name">${escapeHtml(s.label)}</span>
         <span class="level">${I18n.fmtMeters(s.levelM.toFixed(2))}</span>
         <span class="age">${I18n.timeAgo(s.updated)}</span>
-        ${s.trend ? `<span class="trend trend-${s.trend}" title="${I18n.t("canal.trend." + s.trend)}">${I18n.t("canal.trend." + s.trend).charAt(0)}</span>` : ""}
+        ${s.trend ? `<span class="trend trend-${s.trend}" title="${I18n.t("canal.trend." + s.trend)}">${CANAL_TREND_GLYPH[s.trend]}</span>` : ""}
       </div>`
     )
     .join("");
