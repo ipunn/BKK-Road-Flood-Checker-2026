@@ -41,3 +41,5 @@ A future reader seeing road-only verdict code alongside area-wide documentation
 should not "unify" them by giving area flood a Passability status or by
 inferring road-vs-area from report text — the split is deliberate. See
 `PRODUCT.md` for the updated product framing.
+
+> Amended by docs/adr/0009: an opt-in "Use my location" now exists for the near-me summary only; the Area flood view still uses no device location.

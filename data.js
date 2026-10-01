@@ -961,7 +961,30 @@
     }
   }
 
+  // Answer-first header: status counts for the visible points, optionally
+  // limited to a radius around the user's chosen/located origin. Pure — the
+  // origin is passed in and never stored here (docs/adr/0009).
+  function summarizePoints(points, opts) {
+    const { origin, radiusM } = opts || {};
+    const out = { red: 0, yellow: 0, green: 0, gray: 0, nearestBlocked: null };
+    for (const p of points) {
+      let distM = null;
+      if (origin) {
+        if (p.lat == null || p.lng == null || isNaN(p.lat) || isNaN(p.lng)) continue;
+        distM = distanceMeters(origin.lat, origin.lng, p.lat, p.lng);
+        if (distM > radiusM) continue;
+      }
+      if (out[p.status] != null) out[p.status]++;
+      if (origin && p.status === "red" && (!out.nearestBlocked || distM < out.nearestBlocked.distM)) {
+        out.nearestBlocked = { point: p, distM };
+      }
+    }
+    return out;
+  }
+
   globalTarget.FloodData = {
+    summarizePoints,
+    isInBangkok: inBangkok,
     GISTDA_WARN_TILE_URL,
     gistdaWarnStyle,
     probeGistdaTiles,

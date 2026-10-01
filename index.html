@@ -35,11 +35,19 @@
 
   <div id="app">
     <aside id="sidebar">
-      <button id="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-panels">
-        <span data-i18n="sidebar.roadlist">รายการถนน</span>
-        <span class="sidebar-toggle-icon" aria-hidden="true">▾</span>
+      <button id="sidebar-toggle" type="button" aria-expanded="false" aria-controls="sidebar-panels" data-i18n-aria-label="sidebar.roadlist" aria-label="รายการถนน">
+        <span class="sheet-grip" aria-hidden="true"></span>
+        <span id="summary-peek" class="summary-peek"></span>
       </button>
       <div id="sidebar-panels">
+      <div class="panel" id="summary-panel">
+        <h2 data-i18n="summary.title">สถานการณ์ตอนนี้</h2>
+        <div id="summary-stats" class="summary-stats"></div>
+        <p id="summary-scope" class="summary-scope"></p>
+        <p id="summary-nearest" class="summary-nearest" hidden></p>
+        <button id="nearme-btn" class="primary-btn" type="button" data-i18n="nearme.btn">ใช้ตำแหน่งของฉัน</button>
+        <p id="nearme-msg" class="empty-hint" hidden></p>
+      </div>
       <div class="panel">
         <h2 data-i18n="myroute.title">เส้นทางของฉัน</h2>
         <div id="route-list" class="route-list">

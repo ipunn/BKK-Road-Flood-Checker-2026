@@ -705,59 +705,121 @@ h1, h2 { margin: 0; }
   margin: 4px 0 0;
 }
 
-/* Sidebar toggle: a mobile-only collapsible bottom sheet so the map gets
-   the full screen by default instead of the sidebar permanently eating
-   ~48% of a portrait phone's height. Hidden entirely on desktop, where the
-   sidebar is always fully visible regardless of this button/attribute. */
-#sidebar-toggle {
-  display: none;
-  width: 100%;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--board-panel);
-  color: var(--paper);
-  font-family: var(--font-display);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  border: none;
-  border-bottom: 1px solid var(--board-line);
+/* Mobile: the map fills the screen and the sidebar becomes a bottom sheet.
+   The peek strip (#sidebar-toggle) always shows the live summary counts;
+   tapping it expands the full panels. Hidden entirely on desktop. */
+#sidebar-toggle { display: none; }
+.summary-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
   padding: 10px 12px;
+  border: 1px solid var(--board-line);
+  border-left-width: 5px;
+  border-radius: 0;
+  background: var(--board-panel);
+}
+.stat-n { font-family: var(--font-data); font-size: 1.8rem; font-weight: 500; line-height: 1.1; color: var(--paper); }
+.stat-l { font-size: 0.74rem; color: var(--ink-dim); }
+.stat.red { border-left-color: #e02f2f; }
+.stat.yellow { border-left-color: #f2a10d; }
+.stat.green { border-left-color: #1fa24a; }
+.stat.red .stat-n { color: var(--stamp-red); }
+.stat.zero .stat-n { color: var(--ink-dim); }
+.summary-scope { margin: 10px 0 0; font-size: 0.78rem; color: var(--ink-dim); }
+.summary-nearest { margin: 8px 0 0; font-size: 0.84rem; color: var(--ink); }
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--brass);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
   cursor: pointer;
 }
-.sidebar-toggle-icon { transition: transform 0.15s ease; }
-#sidebar[aria-expanded="true"] .sidebar-toggle-icon,
-#sidebar-toggle[aria-expanded="true"] .sidebar-toggle-icon { transform: rotate(180deg); }
+.primary-btn {
+  margin-top: 10px;
+  min-height: 44px;
+  width: 100%;
+  background: var(--brass);
+  color: #1c1815;
+  border: 1px solid var(--brass);
+  border-radius: 0;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+.primary-btn:hover { background: #c99649; }
 
 @media (max-width: 720px) {
-  #app { flex-direction: column; }
+  #app { position: relative; }
+  #map-wrap { margin-bottom: 92px; } /* keeps Leaflet's attribution above the peek strip */
   #sidebar {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1100; /* above Leaflet panes/controls and the loading overlay */
     width: 100%;
     min-width: 0;
-    max-height: none;
+    max-height: 82%;
     padding: 0;
     gap: 0;
+    overflow: hidden;
+    border-right: none;
+    border-top: 1px solid var(--board-line);
+    border-radius: 0;
+    background: var(--board);
+    box-shadow: 0 -4px 16px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
   }
-  #sidebar-toggle { display: flex; }
+  #sidebar-toggle {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+    width: 100%;
+    min-height: 92px;
+    padding: 8px 14px 10px;
+    background: var(--board-panel);
+    border: none;
+    border-bottom: 1px solid var(--board-line);
+    border-radius: 0;
+    color: var(--paper);
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+  .sheet-grip { align-self: center; width: 40px; height: 4px; border-radius: 2px; background: var(--board-line); }
+  .peek-scope { font-size: 0.72rem; color: var(--ink-dim); text-align: center; }
+  .peek-stats { display: flex; gap: 14px; justify-content: space-between; font-size: 0.8rem; }
+  .peek-stat { display: inline-flex; align-items: baseline; gap: 5px; color: var(--ink-dim); }
+  .peek-stat b { font-family: var(--font-data); font-size: 1.35rem; font-weight: 500; color: var(--paper); }
+  .peek-stat.red b { color: var(--stamp-red); }
+  .peek-stat.zero b { color: var(--ink-dim); }
   #sidebar-panels {
+    display: none;
     overflow-y: auto;
-    max-height: 0;
-    padding: 0 12px;
-    transition: max-height 0.2s ease;
-  }
-  #sidebar-toggle[aria-expanded="true"] + #sidebar-panels {
-    max-height: 65vh;
     padding: 12px;
+    flex-direction: column;
+    gap: 12px;
   }
-  #map { flex: 1; min-height: 0; }
-  #topbar { flex-wrap: wrap; gap: 8px; }
-  #topnav { order: 3; width: 100%; }
-  /* #status-line's nowrap (style above) is fine on desktop's wide single
-     row, but on a narrow phone screen a long status message (e.g. several
-     sources still loading, or several failing at once) has nowhere to wrap
-     to and runs off the edge of the screen instead. Let it wrap and take
-     its own full-width row here. */
-  #status-line { white-space: normal; order: 2; width: 100%; }
+  #sidebar-toggle[aria-expanded="true"] + #sidebar-panels { display: flex; max-height: calc(82vh - 92px); }
+  #summary-stats { display: none; } /* the peek strip already shows these */
+  #topbar { flex-wrap: wrap; gap: 4px 12px; padding: 8px 12px; }
+  #topnav { order: 2; flex: 1; gap: 10px; align-items: center; }
+  #topnav a { padding: 4px 2px; white-space: nowrap; }
+  .lang-toggle { white-space: nowrap; }
+  #topbar h1 { font-size: 0.92rem; }
+  .lang-toggle { margin-left: auto; }
+  /* #status-line's nowrap is fine on desktop's wide single row, but a long
+     failure message on a phone would run off the edge: let it wrap onto its
+     own full-width row. */
+  #status-line { white-space: normal; order: 3; width: 100%; font-size: 0.68rem; }
+  #refresh-btn span { display: none; }
 }
 
 .canal-detail { font-size: 0.78rem; color: var(--ink-dim); }

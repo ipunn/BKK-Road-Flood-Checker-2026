@@ -722,3 +722,35 @@ test("probeGistdaTiles: 200 and 404 (no polygons in tile) are available; network
   assert.equal(await FD.probeGistdaTiles(mk(403)), false);
   assert.equal(await FD.probeGistdaTiles(mk(new Error("blocked"))), false);
 });
+
+// ---- Area summary (answer-first header, "near me") ----
+
+const P = (status, lat, lng, label) => ({ status, lat, lng, label: label || status });
+
+test("summarizePoints counts statuses across all points when no origin is given", () => {
+  const s = FD.summarizePoints([P("red", 13.7, 100.5), P("red", 13.8, 100.5), P("yellow", 13.7, 100.6), P("green", 13.7, 100.4), P("gray", 13.7, 100.4)]);
+  assert.deepEqual({ red: s.red, yellow: s.yellow, green: s.green, gray: s.gray }, { red: 2, yellow: 1, green: 1, gray: 1 });
+  assert.equal(s.nearestBlocked, null);
+});
+
+test("summarizePoints with an origin keeps only points within the radius and finds the nearest blocked one", () => {
+  const origin = { lat: 13.75, lng: 100.5 };
+  const near = P("red", 13.755, 100.5, "near"); // ~550 m
+  const far = P("red", 13.9, 100.5, "far"); // ~16 km
+  const mid = P("red", 13.765, 100.5, "mid"); // ~1.7 km
+  const s = FD.summarizePoints([far, mid, near, P("yellow", 13.76, 100.5)], { origin, radiusM: 2000 });
+  assert.equal(s.red, 2);
+  assert.equal(s.yellow, 1);
+  assert.equal(s.nearestBlocked.point.label, "near");
+  assert.ok(s.nearestBlocked.distM > 400 && s.nearestBlocked.distM < 700);
+});
+
+test("summarizePoints ignores points without coordinates when an origin is given", () => {
+  const s = FD.summarizePoints([P("red", null, null)], { origin: { lat: 13.75, lng: 100.5 }, radiusM: 2000 });
+  assert.equal(s.red, 0);
+});
+
+test("isInBangkok accepts Bangkok and rejects Chiang Mai", () => {
+  assert.equal(FD.isInBangkok(13.75, 100.5), true);
+  assert.equal(FD.isInBangkok(18.79, 98.98), false);
+});

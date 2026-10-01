@@ -143,6 +143,7 @@ function renderCanalMarkers() {
 // a pin the user can't see would be confusing; keeps #canal-toggle's own
 // pressed/active state in sync so the button doesn't lie about layer state.
 function flyToCanalStation(key) {
+  collapseSheet();
   const s = canalStations.find((x) => x.key === key);
   if (!s || s.lat == null || s.lng == null || isNaN(s.lat) || isNaN(s.lng)) return;
   const canalToggle = document.getElementById("canal-toggle");
@@ -268,7 +269,15 @@ function renderRelatedConditions() {
   });
 }
 
+// On a phone the bottom sheet covers the map once expanded; collapse it
+// whenever the user picks something to look at on the map. No-op on desktop.
+function collapseSheet() {
+  const t = document.getElementById("sidebar-toggle");
+  if (t) t.setAttribute("aria-expanded", "false");
+}
+
 function flyToPoint(key) {
+  collapseSheet();
   const p = allPoints.find((x) => x.key === key);
   if (!p || p.lat == null || p.lng == null || isNaN(p.lat) || isNaN(p.lng)) return;
   map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
@@ -340,6 +349,7 @@ function renderDistrictCounts() {
 // Pans to the report; opens its marker popup when it has one, else (older
 // than the verdict window, so no marker) a plain popup with the photo.
 function flyToGalleryItem(key) {
+  collapseSheet();
   const it = reportPhotos.find((p) => p.key === key);
   if (!it) return;
   map.flyTo([it.lat, it.lng], Math.max(map.getZoom(), 15), { duration: 0.6 });
@@ -403,7 +413,94 @@ function contributorsHtml(p) {
   return `<div class="corroboration-note">${I18n.t("corroboration.note", { n: contributors.length })}<ul>${rows}</ul></div>`;
 }
 
+// Answer-first summary. With no userLocation it counts every visible report
+// in Bangkok; after an explicit "Use my location" tap it counts reports within
+// NEARME_RADIUS_M of the driver. The location lives only in this variable —
+// never stored or sent (docs/adr/0009).
+const NEARME_RADIUS_M = 2000;
+let userLocation = null; // {lat, lng} or null
+let userMarker = null;
+
+function fmtDist(m) {
+  return m < 1000 ? I18n.t("summary.dist.m", { n: Math.round(m) }) : I18n.t("summary.dist.km", { n: (m / 1000).toFixed(1) });
+}
+
+function renderSummary() {
+  const pts = visiblePoints();
+  const s = FD.summarizePoints(pts, userLocation ? { origin: userLocation, radiusM: NEARME_RADIUS_M } : undefined);
+  const tiles = [
+    ["red", "summary.blocked", s.red],
+    ["yellow", "summary.caution", s.yellow],
+    ["green", "summary.clear", s.green],
+  ];
+  document.getElementById("summary-stats").innerHTML = tiles
+    .map(([c, k, n]) => `<div class="stat ${c}${n === 0 ? " zero" : ""}"><span class="stat-n">${n}</span><span class="stat-l">${I18n.t(k)}</span></div>`)
+    .join("");
+  document.getElementById("summary-peek").innerHTML =
+    `<span class="peek-stats">${tiles.map(([c, k, n]) => `<span class="peek-stat ${c}${n === 0 ? " zero" : ""}"><b>${n}</b> ${I18n.t(k)}</span>`).join("")}</span>`;
+  const age = I18n.t("freshness." + maxAgeMinutes);
+  const scope = userLocation
+    ? I18n.t("summary.scope.near", { km: NEARME_RADIUS_M / 1000, age })
+    : I18n.t("summary.scope.city", { age });
+  document.getElementById("summary-scope").textContent = scope;
+  document.getElementById("summary-peek").insertAdjacentHTML("beforeend", `<span class="peek-scope">${scope}</span>`);
+  const nearestEl = document.getElementById("summary-nearest");
+  nearestEl.hidden = !userLocation;
+  nearestEl.replaceChildren();
+  if (userLocation) {
+    if (s.nearestBlocked) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "link-btn";
+      b.textContent = I18n.t("summary.nearest", { name: s.nearestBlocked.point.label, dist: fmtDist(s.nearestBlocked.distM) });
+      b.addEventListener("click", () => flyToPoint(s.nearestBlocked.point.key));
+      nearestEl.appendChild(b);
+    } else {
+      nearestEl.textContent = I18n.t("summary.nearest.none");
+    }
+  } else if (s.red + s.yellow + s.green + s.gray === 0 && allPoints.length > 0) {
+    // Everything is older than the freshness window — say so rather than a row of zeros.
+    document.getElementById("summary-scope").textContent = scope + " — " + I18n.t("summary.empty");
+  }
+  document.getElementById("nearme-btn").textContent = I18n.t(userLocation ? "nearme.off" : "nearme.btn");
+}
+
+function setNearMeMessage(key) {
+  const el = document.getElementById("nearme-msg");
+  el.textContent = key ? I18n.t(key) : "";
+  el.hidden = !key;
+}
+
+function clearUserLocation() {
+  userLocation = null;
+  if (userMarker) {
+    map.removeLayer(userMarker);
+    userMarker = null;
+  }
+  setNearMeMessage(null);
+  renderSummary();
+}
+
+function requestUserLocation() {
+  if (!navigator.geolocation) return setNearMeMessage("nearme.error");
+  setNearMeMessage("nearme.finding");
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      const { latitude: lat, longitude: lng } = pos.coords;
+      if (!FD.isInBangkok(lat, lng)) return setNearMeMessage("nearme.outside");
+      userLocation = { lat, lng };
+      userMarker = L.circleMarker([lat, lng], { radius: 7, color: "#ffffff", weight: 2, fillColor: "#b8863b", fillOpacity: 1, interactive: false }).addTo(map);
+      map.setView([lat, lng], 14);
+      setNearMeMessage("nearme.privacy");
+      renderSummary();
+    },
+    (err) => setNearMeMessage(err && err.code === 1 ? "nearme.denied" : "nearme.error"),
+    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+  );
+}
+
 function renderMarkers() {
+  renderSummary();
   markersLayer.clearLayers();
   markersByKey.clear();
   for (const p of visiblePoints()) {
@@ -700,6 +797,10 @@ function main() {
     renderPhotoGallery();
   });
   document.getElementById("refresh-btn").addEventListener("click", refreshAll);
+  document.getElementById("nearme-btn").addEventListener("click", () => {
+    if (userLocation) clearUserLocation();
+    else requestUserLocation();
+  });
   document.getElementById("freshness-filter").addEventListener("change", (e) => {
     maxAgeMinutes = parseInt(e.target.value, 10);
     renderMarkers();
@@ -710,14 +811,6 @@ function main() {
   sidebarToggle.addEventListener("click", () => {
     const expanded = sidebarToggle.getAttribute("aria-expanded") === "true";
     sidebarToggle.setAttribute("aria-expanded", String(!expanded));
-    // Expanding/collapsing the mobile bottom sheet resizes #map (they share
-    // #app's flex-column height) — Leaflet needs invalidateSize() after the
-    // CSS transition or its tiles stay clipped to the old container size.
-    sidebarPanels.addEventListener(
-      "transitionend",
-      () => map.invalidateSize(),
-      { once: true }
-    );
   });
 
   const cameraToggle = document.getElementById("camera-toggle");

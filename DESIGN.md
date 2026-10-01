@@ -64,6 +64,14 @@ Audience: Bangkok drivers glancing at a phone outdoors, often in rain, low
 light, or glare, deciding fast whether a road is passable. Every device here
 must survive a two-second glance, not reward close reading.
 
+## Mobile and answer-first layout
+
+The top of the sidebar (and the peek strip of the mobile bottom sheet) is a
+three-number summary — blocked / caution / clear — before any list or toggle.
+At <=720px the map fills the screen and the sidebar is a bottom sheet whose
+collapsed peek strip always shows that summary. A light theme was tried and
+rejected in favour of this dark Duty Board palette.
+
 ## Colors
 
 Warm near-black board tone, not neutral slate — evokes cork/board material lit
