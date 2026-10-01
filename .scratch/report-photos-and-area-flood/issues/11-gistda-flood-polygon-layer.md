@@ -19,3 +19,5 @@
 Deferred 2026-10-01: validity times are only in a CORS-closed API (see ../gistda-polygons-finding.md), so the layer could only say "update time unknown", and an empty tile cannot be told from a failed one. Reopen if GISTDA exposes timestamps with CORS open or a documented endpoint. If shipped anyway, ship only the 24 h warning layer.
 
 Shipped 2026-10-01 per user go-ahead: 24 h warning layer only, labelled "update time unknown" (docs/adr/0008). Forecast days not shipped. Tile failure is detected by an up-front probe tile fetch; Leaflet.VectorGrid is loaded lazily from unpkg. Not browser-verified.
+
+Review follow-ups: added a double-click guard and an 8 s probe timeout. Known gaps, accepted: only the first-enable probe detects a down host (later per-tile failures are silent); the script has no SRI hash; the sources page does not list GISTDA (it lists none of the off-by-default layers either); colours are GISTDA's own, not DESIGN.md tokens, to match the source's legend.

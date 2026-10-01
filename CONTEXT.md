@@ -73,8 +73,8 @@ and stamp shape in the UI, per `DESIGN.md`.
 _Avoid_: Severity, risk level
 
 **Related condition**:
-Upstream/contextual data (e.g. dam levels, canal discharge, rainfall, GISTDA
-24 h flood-warning polygons (docs/adr/0008; the forecast layers are not shipped), BMA flood-centre's flooded-roads sheet) shown
+Upstream/contextual data (e.g. dam levels, canal discharge, rainfall, GISTDA's
+24 h flood-warning polygons (the forecast layers are not shipped) and BMA flood-centre's flooded-roads sheet) shown
 for awareness only — each with a visible source and age label (or an explicit
 "update time unknown" where the source gives none), off by default behind its
 own toggle — never a Sensor report, Event report, or Citizen report.

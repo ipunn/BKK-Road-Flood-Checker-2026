@@ -942,6 +942,8 @@
   // 1 = Watch, 2 = Warning. Anything else is not drawn.
   const GISTDA_WARN_TILE_URL =
     "https://check-water-map-service-726396821992.asia-southeast3.run.app/tiles/flood-warn/{z}/{x}/{y}.pbf";
+  // z6/49/29 covers Bangkok; the probe only checks the host answers, not that
+  // this tile holds polygons.
   const GISTDA_PROBE_URL = GISTDA_WARN_TILE_URL.replace("{z}/{x}/{y}", "6/49/29");
   function gistdaWarnStyle(classRisk) {
     if (classRisk === 1) return { label: "watch", fillColor: "#f9a825", color: "#f9a825", fillOpacity: 0.35, weight: 0.5, fill: true };
@@ -952,7 +954,7 @@
   // a network/CORS failure or 5xx/401/403 means the host is gone or blocked.
   async function probeGistdaTiles(fetchFn) {
     try {
-      const res = await (fetchFn || fetch)(GISTDA_PROBE_URL);
+      const res = await (fetchFn || fetch)(GISTDA_PROBE_URL, { signal: AbortSignal.timeout(8000) });
       return res.status === 404 || (res.status >= 200 && res.status < 300);
     } catch (_) {
       return false;

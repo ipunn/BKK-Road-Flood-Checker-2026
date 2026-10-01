@@ -790,7 +790,17 @@ function main() {
           s.onerror = reject;
           document.head.appendChild(s);
         });
+  let gistdaBusy = false; // guards double-clicks while the script/probe load is in flight
   gistdaToggle.addEventListener("click", async () => {
+    if (gistdaBusy) return;
+    gistdaBusy = true;
+    try {
+      await gistdaToggleClick();
+    } finally {
+      gistdaBusy = false;
+    }
+  });
+  async function gistdaToggleClick() {
     const showing = gistdaToggle.getAttribute("aria-pressed") === "true";
     if (!showing && !gistdaLayer) {
       try {
@@ -820,7 +830,7 @@ function main() {
     }
     gistdaToggle.setAttribute("aria-pressed", String(!showing));
     gistdaToggle.classList.toggle("active", !showing);
-  });
+  }
 
   // Canal markers are already kept up to date by refreshThaiWater() on the
   // normal refresh cycle regardless of toggle state (the sidebar's Related
