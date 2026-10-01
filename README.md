@@ -13,7 +13,7 @@ Department (TMD), and DDPM. BMA flood hotline: **1555**.
   cached/mock data — if a feed is down, the status line says so instead of showing
   stale numbers as if they were fresh).
 - Colour-codes each reported point by car passability using a simple depth threshold.
-- Shows an at-a-glance summary (blocked / caution / clear) for all of Bangkok, or within 2 km of you after an opt-in "Use my location" tap.
+- Shows an at-a-glance summary (blocked / caution / clear) for all of Bangkok, or within 2 km of you after an opt-in "Current location" tap.
 - Shows the citizen-submitted photo on a Traffy Fondue report, when one exists, so you
   can judge it yourself instead of trusting a status dot alone.
 - Shows related layers (canal levels, BMA flooded-roads list, GISTDA 24 h warning) on by default, each switchable off from the chips on the map.

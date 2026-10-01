@@ -2,7 +2,7 @@
 status: accepted
 ---
 
-# Allow an opt-in "Use my location" for the near-me summary
+# Allow an opt-in "Current location" for the near-me summary
 
 ADR-0007 chose a district picker and place search over the browser Geolocation
 API so nothing about the driver's position is requested. That held for the Area

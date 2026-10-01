@@ -406,7 +406,7 @@ function contributorsHtml(p) {
 }
 
 // Answer-first summary. With no userLocation it counts every visible report
-// in Bangkok; after an explicit "Use my location" tap it counts reports within
+// in Bangkok; after an explicit "Current location" tap it counts reports within
 // NEARME_RADIUS_M of the driver. The location lives only in this variable —
 // never stored or sent (docs/adr/0009).
 const NEARME_RADIUS_M = 2000;
@@ -481,7 +481,7 @@ function requestUserLocation() {
       const { latitude: lat, longitude: lng } = pos.coords;
       if (!FD.isInBangkok(lat, lng)) return setNearMeMessage("nearme.outside");
       userLocation = { lat, lng };
-      userMarker = L.circleMarker([lat, lng], { radius: 7, color: "#ffffff", weight: 2, fillColor: "#b8863b", fillOpacity: 1, interactive: false }).addTo(map);
+      userMarker = L.circleMarker([lat, lng], { radius: 7, color: "#ffffff", weight: 2, fillColor: "#1f7aff", fillOpacity: 1, interactive: false }).addTo(map);
       map.setView([lat, lng], 14);
       setNearMeMessage("nearme.privacy");
       renderSummary();
