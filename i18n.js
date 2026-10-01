@@ -77,6 +77,11 @@
       "gallery.title": "รูปล่าสุดจากรายงาน",
       "gallery.note": "รูปจากรายงานประชาชน เรียงจากใหม่ไปเก่า ไม่ใช่สถานะถนน — ดูอายุของรูปทุกครั้ง",
       "gallery.more": "แสดงเพิ่ม",
+      "gallery.district.label": "เลือกเขต",
+      "gallery.district.all": "ทุกเขต",
+      "gallery.search.placeholder": "ค้นหาสถานที่ เช่น ซอย ถนน หมู่บ้าน…",
+      "gallery.empty.none": "ยังไม่มีรายงานล่าสุดในพื้นที่นี้ (ไม่ได้หมายความว่าไม่มีน้ำท่วม)",
+      "gallery.empty.stale": "ข้อมูลที่ใกล้ที่สุดเก่าเกินไปหรืออยู่ไกลเกินกว่าจะบอกได้",
       "gallery.empty": "ไม่มีรูปจากรายงานในขณะนี้",
       "gallery.incomplete": "ไม่สามารถโหลดข้อมูลจาก Traffy Fondue ได้ รายการรูปอาจไม่ครบ",
       "corroboration.note": "ยืนยันจาก {n} รายงาน:",
@@ -240,6 +245,11 @@
       "gallery.title": "Latest report photos",
       "gallery.note": "Photos from citizen reports, newest first. Not a road status — always check the photo's age.",
       "gallery.more": "Show more",
+      "gallery.district.label": "Choose a district",
+      "gallery.district.all": "All districts",
+      "gallery.search.placeholder": "Search a place, e.g. soi, road, village…",
+      "gallery.empty.none": "No recent reports in this area (this does not mean it is dry).",
+      "gallery.empty.stale": "The nearest data is too old or too far away to say.",
       "gallery.empty": "No report photos right now.",
       "gallery.incomplete": "Could not load Traffy Fondue, so this list may be incomplete.",
       "corroboration.note": "Confirmed by {n} reports:",
@@ -412,6 +422,9 @@
     });
     scope.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
       el.placeholder = t(el.getAttribute("data-i18n-placeholder"));
+    });
+    scope.querySelectorAll("[data-i18n-aria-label]").forEach((el) => {
+      el.setAttribute("aria-label", t(el.getAttribute("data-i18n-aria-label")));
     });
   }
 

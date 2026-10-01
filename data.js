@@ -527,6 +527,8 @@
           updated,
           tsMs: startMs,
           place: e.title || e.title_en || "",
+          district: null, // Longdo events carry no district field; they match by place text only
+          searchText: `${e.title || ""} ${e.title_en || ""} ${e.description || ""} ${e.description_en || ""}`,
           source,
           lat,
           lng,
@@ -615,6 +617,8 @@
           updated: ts,
           tsMs,
           place: props.address || props.subdistrict || "",
+          district: normalizeDistrict(props.district),
+          searchText: `${props.district || ""} ${props.subdistrict || ""} ${props.address || ""} ${props.description || ""}`,
           source: "Traffy Fondue",
           lat,
           lng,
@@ -644,12 +648,43 @@
     return { points, photos, ticketCount: features.length, floodTicketCount };
   }
 
-  // Pure gallery logic for the "Latest photos" section: newest first, resolved
-  // tickets hidden, no freshness cap (a photo's age is shown, not filtered).
-  function buildPhotoGallery(photos, now, limit, offset) {
-    const sorted = (photos || [])
-      .filter((p) => !p.resolved)
-      .sort((a, b) => b.tsMs - a.tsMs);
+  // The 50 Bangkok districts (Thai, without the "เขต" prefix), vendored so the
+  // Area flood view's picker lists a district even when it has no reports.
+  // Traffy's `district` values were checked live (2026-10-01): clean Thai names,
+  // no blanks, all Bangkok.
+  const BANGKOK_DISTRICTS = [
+    "พระนคร", "ดุสิต", "หนองจอก", "บางรัก", "บางเขน", "บางกะปิ", "ปทุมวัน", "ป้อมปราบศัตรูพ่าย", "พระโขนง", "มีนบุรี",
+    "ลาดกระบัง", "ยานนาวา", "สัมพันธวงศ์", "พญาไท", "ธนบุรี", "บางกอกใหญ่", "ห้วยขวาง", "คลองสาน", "ตลิ่งชัน", "บางกอกน้อย",
+    "บางขุนเทียน", "ภาษีเจริญ", "หนองแขม", "ราษฎร์บูรณะ", "บางพลัด", "ดินแดง", "บึงกุ่ม", "สาทร", "บางซื่อ", "จตุจักร",
+    "บางคอแหลม", "ประเวศ", "คลองเตย", "สวนหลวง", "จอมทอง", "ดอนเมือง", "ราชเทวี", "ลาดพร้าว", "วัฒนา", "บางแค",
+    "หลักสี่", "สายไหม", "คันนายาว", "สะพานสูง", "วังทองหลาง", "คลองสามวา", "บางนา", "ทวีวัฒนา", "ทุ่งครุ", "บางบอน",
+  ];
+
+  function normalizeDistrict(d) {
+    return (d || "").trim().replace(/^เขต\s*/, "");
+  }
+
+  // Pure gallery logic for the "Latest photos" section and the Area flood
+  // view: newest first, resolved tickets hidden, no freshness cap (a photo's
+  // age is shown, not filtered). `area` ({district, query}, both optional)
+  // narrows to a district and/or a place-text match. When an area leaves
+  // nothing, `emptyReason` says why: "stale" if even the newest photo anywhere
+  // is older than the verdict window (we can't say), else "none" (the feed is
+  // current and this area has no reports). Never implies "dry".
+  function buildPhotoGallery(photos, now, limit, offset, area) {
+    const all = (photos || []).filter((p) => !p.resolved).sort((a, b) => b.tsMs - a.tsMs);
+    const district = normalizeDistrict(area && area.district);
+    const query = ((area && area.query) || "").trim().toLowerCase();
+    const sorted = all.filter(
+      (p) =>
+        (!district || p.district === district) &&
+        (!query || (p.searchText || p.place || "").toLowerCase().includes(query))
+    );
+    let emptyReason = null;
+    if ((district || query) && sorted.length === 0) {
+      const newestMs = all.length ? all[0].tsMs : -Infinity;
+      emptyReason = now - newestMs > TRAFFY_FALLBACK_MS ? "stale" : "none";
+    }
     const items = sorted.slice(offset, offset + limit).map((p) => ({
       key: p.key,
       photoUrl: p.photoUrl,
@@ -660,7 +695,7 @@
       lat: p.lat,
       lng: p.lng,
     }));
-    return { items, hasMore: offset + limit < sorted.length };
+    return { items, hasMore: offset + limit < sorted.length, emptyReason };
   }
 
   // Minimal RFC-4180 CSV reader: quoted fields, "" escapes, commas/newlines
@@ -910,6 +945,7 @@
     loadTraffy,
     parseTraffy,
     buildPhotoGallery,
+    BANGKOK_DISTRICTS,
     parseLongdo,
     parseCanalStations,
     loadThaiWaterCanal,

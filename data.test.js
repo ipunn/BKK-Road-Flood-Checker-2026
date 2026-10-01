@@ -623,3 +623,61 @@ test("buildPhotoGallery merges Traffy and Longdo photos newest first, each tagge
   assert.equal(items[0].source.startsWith("Longdo/iTIC"), true);
   assert.equal(items[1].source, "Traffy Fondue");
 });
+
+// ---- Area flood view (ticket 06) ----
+
+function areaPhotos() {
+  const feat = (id, ts, district, address, lat) =>
+    traffyFeature({ id, timestamp: ts, photo_url: `https://x/${id}.jpg`, address, lat });
+  const f1 = feat("a", "2026-10-01 11:50:00", "ประเวศ", "ซอยอ่อนนุช 70", 13.71);
+  f1.properties.district = "ประเวศ";
+  const f2 = feat("b", "2026-10-01 11:40:00", "เขตบางกะปิ", "ถนนลาดพร้าว", 13.76);
+  f2.properties.district = "เขตบางกะปิ"; // variant with the เขต prefix
+  const f3 = feat("c", "2026-10-01 11:30:00", "ประเวศ", "ถนนศรีนครินทร์", 13.72);
+  f3.properties.district = "ประเวศ";
+  const t = FD.parseTraffy({ features: [f1, f2, f3] }, NOW_MS).photos;
+  const l = FD.parseLongdo(
+    [longdoEvent({ eid: "ld", title: "น้ำท่วม ถนนบางนา", start: "2026-10-01 11:45:00", images: ["https://event.longdo.com/image/view/5"] })],
+    NOW_MS
+  ).photos;
+  return [...t, ...l];
+}
+
+test("BANGKOK_DISTRICTS lists the 50 districts without the เขต prefix", () => {
+  assert.equal(FD.BANGKOK_DISTRICTS.length, 50);
+  assert.ok(FD.BANGKOK_DISTRICTS.includes("ประเวศ"));
+  assert.ok(FD.BANGKOK_DISTRICTS.every((d) => !d.startsWith("เขต")));
+});
+
+test("buildPhotoGallery filters by district, tolerating the เขต prefix variant", () => {
+  const p = FD.buildPhotoGallery(areaPhotos(), NOW_MS, 12, 0, { district: "ประเวศ" });
+  assert.deepEqual(p.items.map((i) => i.key), ["traffy-a", "traffy-c"]);
+  const b = FD.buildPhotoGallery(areaPhotos(), NOW_MS, 12, 0, { district: "บางกะปิ" });
+  assert.deepEqual(b.items.map((i) => i.key), ["traffy-b"]);
+});
+
+test("buildPhotoGallery filters by place text across Traffy and Longdo, case-insensitively", () => {
+  const r = FD.buildPhotoGallery(areaPhotos(), NOW_MS, 12, 0, { query: "ลาดพร้าว" });
+  assert.deepEqual(r.items.map((i) => i.key), ["traffy-b"]);
+  const l = FD.buildPhotoGallery(areaPhotos(), NOW_MS, 12, 0, { query: "บางนา" });
+  assert.deepEqual(l.items.map((i) => i.key), ["longdo-ld"]);
+  assert.equal(FD.buildPhotoGallery(areaPhotos(), NOW_MS, 12, 0, { query: "ศรีนคริน" }).items.length, 1);
+});
+
+test("buildPhotoGallery with no area, or a cleared one, returns the full gallery and no empty reason", () => {
+  for (const area of [undefined, {}, { district: "", query: "  " }]) {
+    const r = FD.buildPhotoGallery(areaPhotos(), NOW_MS, 12, 0, area);
+    assert.equal(r.items.length, 4);
+    assert.equal(r.emptyReason, null);
+  }
+});
+
+test("empty area: 'none' when the feed is current, 'stale' when even the newest photo is older than the verdict window", () => {
+  const none = FD.buildPhotoGallery(areaPhotos(), NOW_MS, 12, 0, { district: "บางแค" });
+  assert.deepEqual(none.items, []);
+  assert.equal(none.emptyReason, "none");
+  const old = areaPhotos().map((p) => ({ ...p, tsMs: NOW_MS - 5 * 3600000 }));
+  const stale = FD.buildPhotoGallery(old, NOW_MS, 12, 0, { district: "บางแค" });
+  assert.equal(stale.emptyReason, "stale");
+  assert.equal(FD.buildPhotoGallery([], NOW_MS, 12, 0, { district: "บางแค" }).emptyReason, "stale");
+});

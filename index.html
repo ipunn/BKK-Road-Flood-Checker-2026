@@ -90,6 +90,12 @@
       <div class="panel" id="photo-gallery-panel">
         <h2 data-i18n="gallery.title">รูปล่าสุดจากรายงาน</h2>
         <p class="related-conditions-note" data-i18n="gallery.note">รูปจากรายงานประชาชน เรียงจากใหม่ไปเก่า ไม่ใช่สถานะถนน — ดูอายุของรูปทุกครั้ง</p>
+        <div class="gallery-filters">
+          <select id="gallery-district" data-i18n-aria-label="gallery.district.label" aria-label="เลือกเขต">
+            <option value="" data-i18n="gallery.district.all">ทุกเขต</option>
+          </select>
+          <input id="gallery-search" type="search" data-i18n-placeholder="gallery.search.placeholder" placeholder="ค้นหาสถานที่ เช่น ซอย ถนน หมู่บ้าน…" />
+        </div>
         <div id="photo-gallery" class="photo-gallery"><p class="empty-hint" data-i18n="status.loading">กำลังโหลด…</p></div>
         <button id="photo-gallery-more" class="tab-button" type="button" data-i18n="gallery.more" hidden>แสดงเพิ่ม</button>
       </div>

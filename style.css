@@ -804,3 +804,12 @@ h1, h2 { margin: 0; }
 .gallery-place { font-size: 0.8rem; padding: 0 6px; overflow-wrap: anywhere; }
 .gallery-source { font-family: var(--font-data); font-size: 0.7rem; color: var(--ink-dim); padding: 0 6px 6px; }
 #photo-gallery-more { margin-top: 8px; width: 100%; }
+.gallery-filters { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.gallery-filters select, .gallery-filters input {
+  min-height: 44px;
+  background: var(--board);
+  color: var(--ink);
+  border: 1px solid var(--board-line);
+  font-family: var(--font-body);
+  padding: 0 8px;
+}

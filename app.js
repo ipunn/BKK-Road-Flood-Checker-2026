@@ -18,6 +18,7 @@ let maxAgeMinutes = 60; // freshness filter — only show points reported within
 let reportPhotos = []; // Traffy Report photo candidates for the "Latest photos" gallery — independent of the freshness filter
 const GALLERY_PAGE = 12;
 let galleryShown = GALLERY_PAGE;
+let galleryArea = { district: "", query: "" }; // Area flood view filter; both optional, cleared = full gallery
 let lastFetchOk = { bma: false, longdo: false, traffy: false, thaiwater: false };
 // ThaiWater's canal-level feed measured ~10x slower than Longdo/Traffy and on
 // par with or slower than BMA (see .scratch/traffy-fondue-citizen-reports/
@@ -279,12 +280,14 @@ function flyToPoint(key) {
 function renderPhotoGallery() {
   const el = document.getElementById("photo-gallery");
   const moreBtn = document.getElementById("photo-gallery-more");
-  const { items, hasMore } = FD.buildPhotoGallery(reportPhotos, Date.now(), galleryShown, 0);
+  const { items, hasMore, emptyReason } = FD.buildPhotoGallery(reportPhotos, Date.now(), galleryShown, 0, galleryArea);
   const incomplete = !lastFetchOk.traffy
     ? `<p class="empty-hint">${I18n.t("gallery.incomplete")}</p>`
     : "";
   if (!items.length) {
-    el.innerHTML = incomplete || `<p class="empty-hint">${I18n.t("gallery.empty")}</p>`;
+    el.innerHTML =
+      incomplete ||
+      `<p class="empty-hint">${I18n.t(emptyReason ? "gallery.empty." + emptyReason : "gallery.empty")}</p>`;
   } else {
     el.innerHTML = incomplete + items
       .map((it) => {
@@ -646,6 +649,22 @@ function main() {
     renderRoadList(e.target.value);
     renderRelatedConditions();
   });
+  // District picker + place search turn the gallery into the Area flood view.
+  // No device location is used — the area is always chosen by the user.
+  const districtSel = document.getElementById("gallery-district");
+  FD.BANGKOK_DISTRICTS.forEach((d) => {
+    const o = document.createElement("option");
+    o.value = d;
+    o.textContent = d; // district names stay source-language
+    districtSel.appendChild(o);
+  });
+  const onAreaChange = () => {
+    galleryArea = { district: districtSel.value, query: document.getElementById("gallery-search").value };
+    galleryShown = GALLERY_PAGE;
+    renderPhotoGallery();
+  };
+  districtSel.addEventListener("change", onAreaChange);
+  document.getElementById("gallery-search").addEventListener("input", onAreaChange);
   document.getElementById("photo-gallery-more").addEventListener("click", () => {
     galleryShown += GALLERY_PAGE;
     renderPhotoGallery();
