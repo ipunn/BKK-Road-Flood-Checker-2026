@@ -2,7 +2,7 @@
 
 A live Bangkok flood-passability map. It aggregates reports from multiple public
 sources into a single per-road verdict (clear / caution / blocked) for drivers
-deciding whether a route is passable right now.
+deciding whether a road is passable right now.
 
 ## Language
 
@@ -34,8 +34,8 @@ image Traffy Fondue attaches to tickets forwarded without one (see
 docs/adr/0003). Its job is evidence a driver can judge for themselves, not a
 severity signal: it never changes Passability status. Shown with a prominent
 age label, and may be older than the report that carried it is allowed to
-influence a route verdict — the photo's age window is independent of the
-verdict's freshness window.
+influence a Passability status — the photo's age window is independent of the
+status's freshness window.
 _Avoid_: Attachment, thumbnail (the thumbnail is just how a Report photo is
 displayed)
 
@@ -44,7 +44,7 @@ A lens over the existing reports and Report photos that answers "what is
 flooded near here?" for a neighbourhood, lane, or community — not "can a car
 pass this road?". Reuses the same Citizen/Event reports rather than splitting
 them into a separate source (no text-based road-vs-area classification, per
-docs/adr/0003). Carries no Passability status and is never a route-verdict
+docs/adr/0003). Carries no Passability status and is never a Passability
 input; its evidence is the Report photo, the report text, and an age. Scoped
 to Bangkok.
 _Avoid_: Area flood report (implies a distinct report type or source, which
@@ -59,7 +59,7 @@ report listed as evidence.
 
 **Passability status**:
 The clear / caution / blocked / unknown verdict assigned to a single report or
-to a selected route (the worst status among its reports). Carried by ink color
+to a corroborated map point (the worst status among its merged reports). Carried by ink color
 and stamp shape in the UI, per `DESIGN.md`.
 _Avoid_: Severity, risk level
 
@@ -69,7 +69,7 @@ Upstream/contextual data (e.g. dam levels, canal discharge, rainfall, GISTDA's
 for awareness only — each with a visible source and age label (or an explicit
 "update time unknown" where the source gives none), shown by default behind its
 own toggle (all on by default, switchable off) — never a Sensor report, Event report, or Citizen report.
-It carries no Passability status, is never an input to a route verdict, and
+It carries no Passability status, is never an input to a Passability status, and
 is never a `mergeCorroboration` contributor. Exists to give drivers *some*
 signal when report coverage is missing (most notably during a BMA outage),
 not to replace a report. Shown unconditionally alongside reports, not gated
@@ -89,7 +89,7 @@ A derived red/yellow/green/neutral signal shown only on canal water-level
 stations (`data.js` `waterLevelStatus`), computed from a station's current
 reading against its own BMA-published warning/critical thresholds
 (`CANAL_STATION_THRESHOLDS`). A distinct concept from Passability status —
-it carries the same "never a route-verdict input, never a
+it carries the same "never a Passability input, never a
 `mergeCorroboration` contributor" guarantees "Related condition" already
 makes, and uses a visually distinct color palette (`CANAL_STATUS_COLOR` /
 `--canal-status-*`) and marker shape (a wave `divIcon`, not a `circleMarker`)

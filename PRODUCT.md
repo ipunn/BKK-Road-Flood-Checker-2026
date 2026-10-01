@@ -19,15 +19,15 @@ context.
 Answer one question fast: what is flooded near here right now? For roads that
 means the original question — can a car get through this road? It aggregates live
 Bangkok flood-sensor and citizen-report data, classifies each reported road point
-by car passability, and lets a driver check the specific roads on their route
-before or during a trip. For neighbourhoods, lanes, and communities it shows
+by car passability, and lets a driver see which reported roads near them are
+blocked before or during a trip. For neighbourhoods, lanes, and communities it shows
 recent reports and their photos by area (the Area flood view), with no
 passability verdict. See docs/adr/0007.
 
 ## Positioning
 Unlike the underlying official/aggregator feeds it draws from, this tool converts
 raw sensor and report data into a direct passability verdict (clear / caution /
-blocked) for a driver's own chosen route, with visible data freshness rather than
+blocked) for each reported road, with visible data freshness rather than
 presenting live-look numbers that may already be stale. Passability stays the
 core claim for roads; area flooding is shown as dated evidence (reports and
 photos), never as an inferred verdict.
