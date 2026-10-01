@@ -681,3 +681,24 @@ test("empty area: 'none' when the feed is current, 'stale' when even the newest 
   assert.equal(stale.emptyReason, "stale");
   assert.equal(FD.buildPhotoGallery([], NOW_MS, 12, 0, { district: "บางแค" }).emptyReason, "stale");
 });
+
+// ---- Per-district report counts (ticket 07) ----
+
+test("countReportsByDistrict groups by district, covers the window boundary, and lists zero districts", () => {
+  const H = 3600000;
+  const mk = (key, district, ageH, extra) => ({ key, district, tsMs: NOW_MS - ageH * H, resolved: false, ...extra });
+  const photos = [
+    mk("a", "ประเวศ", 1),
+    mk("b", "ประเวศ", 6), // exactly on the boundary: included
+    mk("c", "ประเวศ", 6.01), // just outside
+    mk("d", "บางกะปิ", 2),
+    mk("e", "บางกะปิ", 2, { resolved: true }), // resolved excluded
+    mk("f", null, 1), // Longdo: no district, not counted
+  ];
+  const counts = FD.countReportsByDistrict(photos, NOW_MS, 6 * H);
+  assert.equal(counts.length, 50);
+  assert.deepEqual(counts[0], { district: "ประเวศ", count: 2 }); // sorted by count desc
+  assert.deepEqual(counts[1], { district: "บางกะปิ", count: 1 });
+  assert.equal(counts.find((c) => c.district === "บางแค").count, 0);
+  assert.equal(counts.reduce((n, c) => n + c.count, 0), 3);
+});

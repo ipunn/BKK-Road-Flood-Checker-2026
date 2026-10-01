@@ -664,6 +664,19 @@
     return (d || "").trim().replace(/^เขต\s*/, "");
   }
 
+  // Report counts per district within `windowMs`, from the same resolved-
+  // excluded, placeholder-free photo list the gallery uses. All 50 districts
+  // are returned (zeros included), most reports first; Bangkok order breaks
+  // ties. A count of reports only — no severity or flood level is implied.
+  function countReportsByDistrict(photos, now, windowMs) {
+    const counts = new Map(BANGKOK_DISTRICTS.map((d) => [d, 0]));
+    for (const p of photos || []) {
+      if (p.resolved || !p.district || !counts.has(p.district)) continue;
+      if (now - p.tsMs <= windowMs) counts.set(p.district, counts.get(p.district) + 1);
+    }
+    return [...counts].map(([district, count]) => ({ district, count })).sort((a, b) => b.count - a.count);
+  }
+
   // Pure gallery logic for the "Latest photos" section and the Area flood
   // view: newest first, resolved tickets hidden, no freshness cap (a photo's
   // age is shown, not filtered). `area` ({district, query}, both optional)
@@ -946,6 +959,7 @@
     parseTraffy,
     buildPhotoGallery,
     BANGKOK_DISTRICTS,
+    countReportsByDistrict,
     parseLongdo,
     parseCanalStations,
     loadThaiWaterCanal,

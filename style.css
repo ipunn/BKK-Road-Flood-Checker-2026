@@ -813,3 +813,16 @@ h1, h2 { margin: 0; }
   font-family: var(--font-body);
   padding: 0 8px;
 }
+.district-counts { margin-bottom: 8px; }
+.district-counts-list { display: flex; flex-wrap: wrap; gap: 6px; }
+.district-count-chip {
+  min-height: 44px;
+  padding: 0 10px;
+  background: var(--board);
+  color: var(--ink);
+  border: 1px solid var(--board-line);
+  font-family: var(--font-data);
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.district-count-chip:hover, .district-count-chip.active { border-color: var(--brass); color: var(--paper); }

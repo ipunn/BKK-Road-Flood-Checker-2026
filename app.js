@@ -17,6 +17,8 @@ let selectedKeys = new Set();
 let maxAgeMinutes = 60; // freshness filter — only show points reported within this window
 let reportPhotos = []; // Traffy Report photo candidates for the "Latest photos" gallery — independent of the freshness filter
 const GALLERY_PAGE = 12;
+const COUNTS_WINDOW_H = 6;
+const COUNTS_SHOWN = 8;
 let galleryShown = GALLERY_PAGE;
 let galleryArea = { district: "", query: "" }; // Area flood view filter; both optional, cleared = full gallery
 let lastFetchOk = { bma: false, longdo: false, traffy: false, thaiwater: false };
@@ -305,6 +307,34 @@ function renderPhotoGallery() {
     });
   }
   moreBtn.hidden = !hasMore;
+  renderDistrictCounts();
+}
+
+// Report counts per district (reports, never a flood level). Choosing one
+// opens that area in the gallery.
+function renderDistrictCounts() {
+  const wrap = document.getElementById("district-counts");
+  const top = FD.countReportsByDistrict(reportPhotos, Date.now(), COUNTS_WINDOW_H * 3600000)
+    .filter((c) => c.count > 0)
+    .slice(0, COUNTS_SHOWN);
+  wrap.hidden = top.length === 0;
+  if (!top.length) return;
+  document.getElementById("district-counts-title").textContent = I18n.t("gallery.counts.title", { hours: COUNTS_WINDOW_H });
+  const list = document.getElementById("district-counts-list");
+  list.innerHTML = top
+    .map(
+      (c) =>
+        `<button type="button" class="district-count-chip${c.district === galleryArea.district ? " active" : ""}" data-district="${escapeHtml(c.district)}">${I18n.t("gallery.counts.item", { district: escapeHtml(c.district), n: c.count })}</button>`
+    )
+    .join("");
+  list.querySelectorAll(".district-count-chip").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      document.getElementById("gallery-district").value = btn.dataset.district;
+      galleryArea = { district: btn.dataset.district, query: document.getElementById("gallery-search").value };
+      galleryShown = GALLERY_PAGE;
+      renderPhotoGallery();
+    });
+  });
 }
 
 // Pans to the report; opens its marker popup when it has one, else (older
