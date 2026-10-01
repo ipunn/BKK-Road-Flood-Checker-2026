@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="style.css?v=4" />
+<link rel="stylesheet" href="style.css?v=5" />
 </head>
 <body>
   <header id="topbar">
@@ -71,6 +71,18 @@
             <td data-i18n="sources.row.thaiwater.provides">ระดับน้ำคลองใกล้พื้นที่แผนที่ — เป็นข้อมูลประกอบ (Related condition) เท่านั้น ไม่มีผลต่อสถานะผ่านได้/ผ่านไม่ได้ของถนนใด ๆ</td>
             <td data-i18n="sources.row.thaiwater.cycle">ตามรอบของ ThaiWater</td>
           </tr>
+          <tr>
+            <td>BMA flood-centre flooded-roads list</td>
+            <td><a href="https://docs.google.com/spreadsheets/d/1CcX-TrFAOe1TdrWHK1XPAiaXqgQfdT9wvU_TCeFPmDs" target="_blank" rel="noopener">docs.google.com/spreadsheets</a></td>
+            <td data-i18n="sources.row.floodcentre.provides">รายชื่อถนนน้ำท่วมจากศูนย์ป้องกันและแก้ไขปัญหาน้ำท่วม กทม. (Google Sheet) — ตำแหน่งโดยประมาณ ไม่มีเวลาอัปเดตรายแถว เป็นข้อมูลประกอบ (Related condition) ไม่มีผลต่อสถานะถนน</td>
+            <td data-i18n="sources.row.floodcentre.cycle">ไม่ทราบรอบอัปเดต</td>
+          </tr>
+          <tr>
+            <td>GISTDA LifeDee 24 h flood warning</td>
+            <td><a href="https://lifedee.gistda.or.th" target="_blank" rel="noopener">lifedee.gistda.or.th</a></td>
+            <td data-i18n="sources.row.gistda.provides">พื้นที่เตือนภัยน้ำท่วม 24 ชม. ของ GISTDA (ระดับพื้นที่ เฝ้าระวัง/เตือนน้ำท่วม) — เป็นข้อมูลประกอบ (Related condition) ไม่ทราบเวลาอัปเดต ไม่มีผลต่อสถานะถนน</td>
+            <td data-i18n="sources.row.gistda.cycle">ไม่ทราบรอบอัปเดต</td>
+          </tr>
         </tbody>
       </table>
     </section>
@@ -105,13 +117,14 @@
         <li data-i18n="sources.limitations.li1">ครอบคลุมเฉพาะจุดที่มีเซ็นเซอร์หรือมีผู้รายงาน — ซอยเล็กจำนวนมากอาจไม่มีข้อมูล</li>
         <li data-i18n="sources.limitations.li2">ไม่มีระบบนำทาง — ใช้ร่วมกับ Google Maps / Longdo Maps</li>
         <li data-i18n="sources.limitations.li3">เกณฑ์ความลึกเป็นการประมาณอย่างง่าย ไม่รวมกระแสน้ำหรือสิ่งกีดขวางใต้น้ำ</li>
+        <li data-i18n="sources.limitations.li4">ปุ่ม "ใช้ตำแหน่งของฉัน" ใช้ตำแหน่งในเบราว์เซอร์เท่านั้น ไม่ส่งออกและไม่เก็บไว้ ตำแหน่งบนคอมพิวเตอร์อาจคลาดเคลื่อนได้มาก</li>
       </ul>
       <p class="note"><strong data-i18n="disclaimer.notofficial">ไม่ใช่ช่องทางทางการ</strong><span data-i18n="disclaimer.follow"> — ติดตามประกาศจาก</span> <span data-i18n="disclaimer.agencies">กทม., กรมอุตุฯ, ปภ.</span> <span data-i18n="disclaimer.hotline">สายด่วน</span> <strong>1555</strong></p>
     </section>
   </main>
 
-  <script src="data.js?v=4"></script>
-  <script src="i18n.js?v=4"></script>
-  <script src="sources.js?v=4"></script>
+  <script src="data.js?v=5"></script>
+  <script src="i18n.js?v=5"></script>
+  <script src="sources.js?v=5"></script>
 </body>
 </html>

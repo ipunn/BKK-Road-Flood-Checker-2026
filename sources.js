@@ -47,7 +47,6 @@ function renderCard(name, ok, meta, points, extraRows) {
       <div class="source-stats">
         <div><span class="stat-num">${points.length}</span><span class="stat-label">${I18n.t("sources.stat.activepoints")}</span></div>
         <div><span class="stat-num">${fmtAge(s.newest)}</span><span class="stat-label">${I18n.t("sources.stat.latest")}</span></div>
-        <div><span class="stat-num">${fmtAge(s.oldest)}</span><span class="stat-label">${I18n.t("sources.stat.oldestactive")}</span></div>
       </div>
       <div class="source-breakdown">
         <span class="badge red">${s.counts.red}</span>
