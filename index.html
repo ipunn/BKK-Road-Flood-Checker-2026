@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="style.css?v=9" />
+<link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
   <header id="topbar">
@@ -39,6 +39,9 @@
         <span class="sheet-grip" aria-hidden="true"></span>
         <span id="summary-peek" class="summary-peek"></span>
       </button>
+      <div id="peek-photos" class="peek-photos">
+        <span class="peek-skel"></span><span class="peek-skel"></span><span class="peek-skel"></span><span class="peek-skel"></span>
+      </div>
       <div id="sidebar-panels">
       <div class="panel" id="summary-panel">
         <h2 data-i18n="summary.title">สถานการณ์ตอนนี้</h2>
@@ -46,6 +49,23 @@
         <p id="summary-scope" class="summary-scope"></p>
         <p id="summary-nearest" class="summary-nearest" hidden></p>
       </div>
+      <div class="panel" id="photo-gallery-panel">
+        <h2 data-i18n="gallery.title">รูปล่าสุดจากรายงาน</h2>
+        <p class="related-conditions-note" data-i18n="gallery.note">รูปจากรายงานประชาชน เรียงจากใหม่ไปเก่า ไม่ใช่สถานะถนน — ดูอายุของรูปทุกครั้ง</p>
+        <div class="gallery-filters">
+          <select id="gallery-district" data-i18n-aria-label="gallery.district.label" aria-label="เลือกเขต">
+            <option value="" data-i18n="gallery.district.all">ทุกเขต</option>
+          </select>
+          <input id="gallery-search" type="search" data-i18n-placeholder="gallery.search.placeholder" placeholder="ค้นหาสถานที่ เช่น ซอย ถนน หมู่บ้าน…" />
+        </div>
+        <div id="district-counts" class="district-counts" hidden>
+          <p class="related-conditions-note" id="district-counts-title"></p>
+          <div id="district-counts-list" class="district-counts-list"></div>
+        </div>
+        <div id="photo-gallery" class="photo-gallery"><p class="empty-hint" data-i18n="status.loading">กำลังโหลด…</p></div>
+        <button id="photo-gallery-more" class="tab-button" type="button" data-i18n="gallery.more" hidden>แสดงเพิ่ม</button>
+      </div>
+
       <div class="panel">
         <div class="panel-row">
           <h2 data-i18n="search.title">ค้นหาถนน</h2>
@@ -73,23 +93,6 @@
           <span class="canal-legend-note" data-i18n="canal.legend.note">(สถานีระดับน้ำปกติไม่แสดงบนแผนที่)</span>
         </div>
         <div id="road-list" class="road-list"><p class="empty-hint" data-i18n="status.loading">กำลังโหลด…</p></div>
-      </div>
-
-      <div class="panel" id="photo-gallery-panel">
-        <h2 data-i18n="gallery.title">รูปล่าสุดจากรายงาน</h2>
-        <p class="related-conditions-note" data-i18n="gallery.note">รูปจากรายงานประชาชน เรียงจากใหม่ไปเก่า ไม่ใช่สถานะถนน — ดูอายุของรูปทุกครั้ง</p>
-        <div class="gallery-filters">
-          <select id="gallery-district" data-i18n-aria-label="gallery.district.label" aria-label="เลือกเขต">
-            <option value="" data-i18n="gallery.district.all">ทุกเขต</option>
-          </select>
-          <input id="gallery-search" type="search" data-i18n-placeholder="gallery.search.placeholder" placeholder="ค้นหาสถานที่ เช่น ซอย ถนน หมู่บ้าน…" />
-        </div>
-        <div id="district-counts" class="district-counts" hidden>
-          <p class="related-conditions-note" id="district-counts-title"></p>
-          <div id="district-counts-list" class="district-counts-list"></div>
-        </div>
-        <div id="photo-gallery" class="photo-gallery"><p class="empty-hint" data-i18n="status.loading">กำลังโหลด…</p></div>
-        <button id="photo-gallery-more" class="tab-button" type="button" data-i18n="gallery.more" hidden>แสดงเพิ่ม</button>
       </div>
 
       <div class="panel">
@@ -125,8 +128,8 @@
   </div>
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
-  <script src="data.js?v=9"></script>
-  <script src="i18n.js?v=9"></script>
-  <script src="app.js?v=9"></script>
+  <script src="data.js?v=10"></script>
+  <script src="i18n.js?v=10"></script>
+  <script src="app.js?v=10"></script>
 </body>
 </html>

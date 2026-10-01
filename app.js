@@ -275,6 +275,40 @@ function renderPhotoGallery() {
   }
   moreBtn.hidden = !hasMore;
   renderDistrictCounts();
+  renderPeekPhotos();
+}
+
+// Mobile: the latest photos sit in the always-visible peek strip, so the key
+// feature needs zero taps. Tapping one flies to it; "See all" opens the sheet
+// at the full gallery. Hidden by CSS on desktop, where the gallery is already
+// in view in the sidebar.
+const PEEK_PHOTOS = 8;
+function renderPeekPhotos() {
+  const el = document.getElementById("peek-photos");
+  if (!el) return;
+  const { items } = FD.buildPhotoGallery(reportPhotos, Date.now(), PEEK_PHOTOS, 0, { district: "", query: "" });
+  el.classList.toggle("empty", items.length === 0);
+  el.setAttribute("aria-label", I18n.t("gallery.title"));
+  if (!items.length) {
+    el.innerHTML = "";
+    return;
+  }
+  el.innerHTML =
+    items
+      .map((it) => {
+        const url = /^https?:\/\//i.test(it.photoUrl) ? it.photoUrl : "";
+        return `<button type="button" class="peek-photo" data-key="${escapeHtml(it.key)}">
+          <img src="${escapeHtml(url)}" alt="${I18n.t("report.photo.alt")}" decoding="async"/>
+          <span class="peek-age">${I18n.timeAgo(it.updated)}</span>
+        </button>`;
+      })
+      .join("") + `<button type="button" class="peek-all">${I18n.t("peek.photos.all")} &rsaquo;</button>`;
+  el.querySelectorAll(".peek-photo").forEach((b) => b.addEventListener("click", () => flyToGalleryItem(b.dataset.key)));
+  el.querySelector(".peek-all").addEventListener("click", () => {
+    document.getElementById("sidebar-toggle").setAttribute("aria-expanded", "true");
+    const panel = document.getElementById("photo-gallery-panel");
+    document.getElementById("sidebar-panels").scrollTop = panel.offsetTop - 12;
+  });
 }
 
 // Report counts per district (reports, never a flood level). Choosing one
@@ -687,11 +721,29 @@ function main() {
     renderMarkers();
     renderRoadList(document.getElementById("road-search").value);
   });
+  // The collapsed sheet's height varies (photo strip present/absent), so size
+  // the map's bottom margin from it instead of a hardcoded number.
+  const fitMapToSheet = () => {
+    const mobile = window.matchMedia("(max-width: 720px)").matches;
+    const t = document.getElementById("sidebar-toggle");
+    const p = document.getElementById("peek-photos");
+    const wrap = document.getElementById("map-wrap");
+    const expanded = t.getAttribute("aria-expanded") === "true";
+    wrap.style.marginBottom = mobile && !expanded ? `${t.offsetHeight + (p.offsetHeight || 0)}px` : "";
+    map.invalidateSize();
+  };
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(fitMapToSheet);
+    ro.observe(document.getElementById("sidebar-toggle"));
+    ro.observe(document.getElementById("peek-photos"));
+  }
+  window.addEventListener("resize", fitMapToSheet);
   const sidebarToggle = document.getElementById("sidebar-toggle");
   const sidebarPanels = document.getElementById("sidebar-panels");
   sidebarToggle.addEventListener("click", () => {
     const expanded = sidebarToggle.getAttribute("aria-expanded") === "true";
     sidebarToggle.setAttribute("aria-expanded", String(!expanded));
+    fitMapToSheet();
   });
 
   // Flooded-roads sheet: one-time fetch on first toggle (retries on the next
