@@ -9,6 +9,7 @@ let map, markersLayer, camerasLayer, canalMarkersLayer;
 let markersByKey = new Map();
 let canalMarkersByKey = new Map();
 let allPoints = []; // every currently-active point, before the freshness filter
+let canalHistory = new Map(); // station key -> previous reading, for trend (FloodData.withCanalTrend)
 let canalStations = []; // ThaiWater canal water-level Related conditions — never a report, see CONTEXT.md
 const RELATED_CONDITIONS_LIMIT = 5;
 let selectedKeys = new Set();
@@ -69,6 +70,21 @@ function canalStationIcon(waterLevelStatus) {
 // Passability status, not merged, not selectable into a route, same as
 // camera pins. Rebuilt on every ThaiWater refresh so the layer (whether
 // currently shown or not) always reflects the latest fetch.
+// Trend + margin-to-critical lines shared by the popup and sidebar row.
+// Both are omitted (not guessed) when the data to compute them is missing.
+function canalDetailHtml(s) {
+  const parts = [];
+  if (s.trend) {
+    const prev = s.trend !== "steady" ? " " + I18n.t("canal.trend.prev", { n: s.prevLevelM.toFixed(2) }) : "";
+    parts.push(I18n.t("canal.trend." + s.trend) + prev);
+  }
+  if (s.marginToCriticalM != null) {
+    const key = s.marginToCriticalM >= 0 ? "canal.margin.under" : "canal.margin.over";
+    parts.push(I18n.t(key, { n: Math.abs(s.marginToCriticalM).toFixed(2) }));
+  }
+  return parts.length ? `<br/><span class="canal-detail">${parts.join(" &middot; ")}</span>` : "";
+}
+
 function renderCanalMarkers() {
   canalMarkersLayer.clearLayers();
   canalMarkersByKey.clear();
@@ -83,7 +99,7 @@ function renderCanalMarkers() {
     const marker = L.marker([s.lat, s.lng], { icon: canalStationIcon(s.waterLevelStatus) });
     marker.bindPopup(`
       <b>${escapeHtml(s.label)}</b><br/>
-      ${I18n.fmtMeters(s.levelM.toFixed(2))} &middot; ${I18n.timeAgo(s.updated)}<br/>
+      ${I18n.fmtMeters(s.levelM.toFixed(2))} &middot; ${I18n.timeAgo(s.updated)}${canalDetailHtml(s)}<br/>
       <span class="related-conditions-note">${I18n.t("canal.popup.note")}</span>
     `);
     canalMarkersLayer.addLayer(marker);
@@ -213,6 +229,7 @@ function renderRelatedConditions() {
         <span class="name">${escapeHtml(s.label)}</span>
         <span class="level">${I18n.fmtMeters(s.levelM.toFixed(2))}</span>
         <span class="age">${I18n.timeAgo(s.updated)}</span>
+        ${s.trend ? `<span class="trend trend-${s.trend}" title="${I18n.t("canal.trend." + s.trend)}">${I18n.t("canal.trend." + s.trend).charAt(0)}</span>` : ""}
       </div>`
     )
     .join("");
@@ -523,7 +540,13 @@ async function refreshThaiWater() {
   const [thaiwaterRes] = await Promise.allSettled([FD.loadThaiWaterCanal()]);
   lastFetchOk.thaiwater = thaiwaterRes.status === "fulfilled";
   thaiwaterEverSettled = true;
-  canalStations = lastFetchOk.thaiwater ? thaiwaterRes.value.stations : [];
+  if (lastFetchOk.thaiwater) {
+    const withTrend = FD.withCanalTrend(thaiwaterRes.value.stations, canalHistory);
+    canalStations = withTrend.stations;
+    canalHistory = withTrend.history;
+  } else {
+    canalStations = [];
+  }
 
   renderRelatedConditions();
   renderCanalMarkers();

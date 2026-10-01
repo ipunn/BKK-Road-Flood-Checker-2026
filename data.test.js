@@ -227,3 +227,212 @@ test("nearestStations doesn't throw on equal-distance ties", () => {
 
   assert.doesNotThrow(() => FD.nearestStations([a, b], 13.7563, 100.5018, 2));
 });
+
+// --- Traffy / Longdo parsers — characterization + fixtures ---
+
+const NOW_ISO = "2026-10-01T12:00:00+07:00";
+const NOW_MS = new Date(NOW_ISO).getTime();
+const STOCK_PHOTO =
+  "https://storage.googleapis.com/traffy_public_bucket/attachment/2022-12/da2125e781282589d482070c3dba1726aa16a4a7.jpg";
+
+function traffyFeature({
+  id = "t1",
+  lat = 13.7563,
+  lng = 100.5018,
+  timestamp = "2026-10-01 11:30:00",
+  state = "กำลังดำเนินการ",
+  photo_url = "https://example.com/real-1.jpg",
+  description = "น้ำท่วมสูง 15 ซม.",
+  type = ["น้ำท่วม"],
+  address = "ถนนทดสอบ",
+} = {}) {
+  return {
+    type: "Feature",
+    id,
+    geometry: { type: "Point", coordinates: [lng, lat] },
+    properties: {
+      ticket_id: id,
+      problem_type_fondue: type,
+      timestamp,
+      state,
+      photo_url,
+      description,
+      address,
+      subdistrict: "แขวงทดสอบ",
+      district: "เขตทดสอบ",
+    },
+  };
+}
+
+// Runs fn with Date.now and global fetch stubbed, so the load* wrappers can
+// be characterized against a fixed response.
+async function withStubbedNetwork(response, fn) {
+  const origNow = Date.now;
+  const origFetch = globalThis.fetch;
+  Date.now = () => NOW_MS;
+  globalThis.fetch = async () => ({ ok: true, json: async () => response });
+  try {
+    return await fn();
+  } finally {
+    Date.now = origNow;
+    globalThis.fetch = origFetch;
+  }
+}
+
+const traffyFixture = {
+  features: [
+    traffyFeature({ id: "ok", photo_url: "https://example.com/real-1.jpg" }),
+    traffyFeature({ id: "stock", photo_url: STOCK_PHOTO, lat: 13.76 }),
+    traffyFeature({ id: "dup1", photo_url: "https://example.com/dup.jpg", lat: 13.77 }),
+    traffyFeature({ id: "dup2", photo_url: "https://example.com/dup.jpg", lat: 13.78 }),
+    traffyFeature({ id: "dup3", photo_url: "https://example.com/dup.jpg", lat: 13.79 }),
+    traffyFeature({ id: "resolved", state: "เสร็จสิ้น", photo_url: "https://example.com/r.jpg" }),
+    traffyFeature({ id: "expired", timestamp: "2026-10-01 07:00:00", photo_url: "https://example.com/e.jpg" }),
+    traffyFeature({ id: "nobkk", lat: 18.79, lng: 98.98, photo_url: "https://example.com/n.jpg" }),
+    traffyFeature({ id: "notflood", type: ["ถนน"], photo_url: "https://example.com/f.jpg" }),
+  ],
+};
+
+test("characterization: loadTraffy output on a fixture", async () => {
+  const result = await withStubbedNetwork(traffyFixture, () => FD.loadTraffy());
+  assert.equal(result.ticketCount, 9);
+  assert.equal(result.floodTicketCount, 8);
+  const byKey = Object.fromEntries(result.points.map((p) => [p.key, p]));
+  assert.deepEqual(Object.keys(byKey).sort(), ["traffy-dup1", "traffy-dup2", "traffy-dup3", "traffy-ok", "traffy-stock"]);
+  assert.equal(byKey["traffy-ok"].photoUrl, "https://example.com/real-1.jpg");
+  assert.equal(byKey["traffy-ok"].depthCm, 15);
+  assert.equal(byKey["traffy-ok"].status, "yellow");
+  assert.equal(byKey["traffy-ok"].source, "Traffy Fondue");
+  assert.equal(byKey["traffy-ok"].label, "ถนนทดสอบ");
+  assert.equal(byKey["traffy-ok"].sublabel, "แขวงทดสอบ เขตทดสอบ");
+  assert.equal(byKey["traffy-ok"].updated, "2026-10-01T11:30:00");
+});
+
+test("parseTraffy matches loadTraffy and is pure given `now`", () => {
+  const result = FD.parseTraffy(traffyFixture, NOW_MS);
+  assert.equal(result.points.length, 5);
+});
+
+test("parseTraffy drops the stock placeholder photo (known URL, even when only one ticket)", () => {
+  const { points } = FD.parseTraffy({ features: [traffyFeature({ id: "s", photo_url: STOCK_PHOTO })] }, NOW_MS);
+  assert.equal(points[0].photoUrl, null);
+});
+
+test("parseTraffy drops a photo URL repeated across 3+ tickets, keeps one repeated twice", () => {
+  const twice = FD.parseTraffy(
+    { features: [traffyFeature({ id: "a", photo_url: "https://x/y.jpg" }), traffyFeature({ id: "b", photo_url: "https://x/y.jpg" })] },
+    NOW_MS
+  );
+  assert.equal(twice.points[0].photoUrl, "https://x/y.jpg");
+  const thrice = FD.parseTraffy(traffyFixture, NOW_MS);
+  const dup = thrice.points.find((p) => p.key === "traffy-dup1");
+  assert.equal(dup.photoUrl, null);
+});
+
+test("parseTraffy excludes resolved/cancelled, expired (>3h), and out-of-Bangkok tickets", () => {
+  const keys = FD.parseTraffy(traffyFixture, NOW_MS).points.map((p) => p.key);
+  assert.ok(!keys.includes("traffy-resolved"));
+  assert.ok(!keys.includes("traffy-expired"));
+  assert.ok(!keys.includes("traffy-nobkk"));
+  assert.ok(!keys.includes("traffy-notflood"));
+});
+
+function longdoEvent(overrides) {
+  return {
+    eid: "e1",
+    icon: "flood",
+    latitude: "13.7563",
+    longitude: "100.5018",
+    title: "น้ำท่วม",
+    description: "น้ำท่วมสูง 20 ซม.",
+    start: "2026-10-01 11:00:00",
+    stop: "2026-10-01 23:59:59",
+    contributor: "iTIC",
+    ...overrides,
+  };
+}
+
+test("characterization: loadLongdo output on a fixture", async () => {
+  const events = [longdoEvent(), longdoEvent({ eid: "other", icon: "accident" })];
+  const result = await withStubbedNetwork(events, () => FD.loadLongdo());
+  assert.equal(result.eventCount, 2);
+  assert.equal(result.floodEventCount, 1);
+  assert.equal(result.points.length, 1);
+  assert.equal(result.points[0].key, "longdo-e1");
+  assert.equal(result.points[0].depthCm, 20);
+  assert.equal(result.points[0].status, "yellow");
+  assert.equal(result.points[0].source, "Longdo/iTIC · iTIC");
+  assert.equal(result.points[0].updated, "2026-10-01T11:00:00");
+});
+
+test("parseLongdo drops events whose stop time has passed", () => {
+  const { points } = FD.parseLongdo([longdoEvent({ stop: "2026-10-01 10:00:00" })], NOW_MS);
+  assert.equal(points.length, 0);
+});
+
+test("parseLongdo keeps an event with no stop within 3h and drops it after", () => {
+  const fresh = FD.parseLongdo([longdoEvent({ stop: "", start: "2026-10-01 10:00:00" })], NOW_MS);
+  assert.equal(fresh.points.length, 1);
+  const old = FD.parseLongdo([longdoEvent({ stop: "", start: "2026-10-01 07:00:00" })], NOW_MS);
+  assert.equal(old.points.length, 0);
+});
+
+test("parseLongdo drops non-flood and out-of-Bangkok events", () => {
+  const { points, floodEventCount } = FD.parseLongdo(
+    [longdoEvent({ eid: "a", icon: "accident" }), longdoEvent({ eid: "b", latitude: "18.79", longitude: "98.98" })],
+    NOW_MS
+  );
+  assert.equal(points.length, 0);
+  assert.equal(floodEventCount, 1);
+});
+
+// --- Canal trend + margin to critical (ticket 08) ---
+
+test("canalTrend is null with no previous reading (first load or missing)", () => {
+  assert.equal(FD.canalTrend(null, 1.2), null);
+  assert.equal(FD.canalTrend(undefined, 1.2), null);
+});
+
+test("canalTrend reports rising, falling, and steady (equal readings)", () => {
+  assert.equal(FD.canalTrend(1.0, 1.2), "rising");
+  assert.equal(FD.canalTrend(1.2, 1.0), "falling");
+  assert.equal(FD.canalTrend(1.2, 1.2), "steady");
+});
+
+test("canalMarginToCriticalM is sourced from the threshold table only", () => {
+  assert.equal(FD.canalMarginToCriticalM(1.5, { warningM: 1.9, criticalM: 2.2 }), 0.7);
+  assert.equal(FD.canalMarginToCriticalM(2.5, { warningM: 1.9, criticalM: 2.2 }), -0.3);
+  assert.equal(FD.canalMarginToCriticalM(1.5, null), null);
+});
+
+test("parseCanalStations adds marginToCriticalM only when thresholds are known", () => {
+  const known = FD.parseCanalStations(canalResponse([canalFeature({ measureValue: 0.27 })]));
+  assert.equal(known[0].marginToCriticalM, null); // test station code isn't in the table
+  const raw = canalResponse([canalFeature({ measureValue: 0.27 })]);
+  raw.data["10"].features[0].properties.station.stationCode = "C00000002-WL.HMK.03"; // critical 1.03
+  assert.equal(FD.parseCanalStations(raw)[0].marginToCriticalM, 0.76);
+});
+
+test("withCanalTrend: first load has no trend; a changed reading compares to the prior one", () => {
+  const s1 = [{ key: "a", levelM: 1.0, updated: "t1" }];
+  const first = FD.withCanalTrend(s1, new Map());
+  assert.equal(first.stations[0].trend, null);
+  const s2 = [{ key: "a", levelM: 1.3, updated: "t2" }];
+  const second = FD.withCanalTrend(s2, first.history);
+  assert.equal(second.stations[0].trend, "rising");
+  assert.equal(second.stations[0].prevLevelM, 1.0);
+});
+
+test("withCanalTrend: a repeat poll of the same reading keeps the earlier comparison", () => {
+  const first = FD.withCanalTrend([{ key: "a", levelM: 1.0, updated: "t1" }], new Map());
+  const second = FD.withCanalTrend([{ key: "a", levelM: 1.3, updated: "t2" }], first.history);
+  const third = FD.withCanalTrend([{ key: "a", levelM: 1.3, updated: "t2" }], second.history);
+  assert.equal(third.stations[0].trend, "rising");
+  assert.equal(third.stations[0].prevLevelM, 1.0);
+});
+
+test("withCanalTrend: equal consecutive distinct readings are steady", () => {
+  const first = FD.withCanalTrend([{ key: "a", levelM: 1.0, updated: "t1" }], new Map());
+  const second = FD.withCanalTrend([{ key: "a", levelM: 1.0, updated: "t2" }], first.history);
+  assert.equal(second.stations[0].trend, "steady");
+});

@@ -459,8 +459,11 @@
   }
 
   async function loadLongdo() {
-    const events = await fetchJSON(LONGDO_EVENTS);
-    const now = Date.now();
+    return parseLongdo(await fetchJSON(LONGDO_EVENTS), Date.now());
+  }
+
+  // Pure parser — `now` (ms) is a parameter so it's testable with fixtures.
+  function parseLongdo(events, now) {
     const points = [];
     let floodEventCount = 0;
     for (const e of events) {
@@ -508,9 +511,12 @@
   }
 
   async function loadTraffy() {
-    const geojson = await fetchJSON(TRAFFY_API);
-    const features = geojson.features || [];
-    const now = Date.now();
+    return parseTraffy(await fetchJSON(TRAFFY_API), Date.now());
+  }
+
+  // Pure parser — `now` (ms) is a parameter so it's testable with fixtures.
+  function parseTraffy(geojson, now) {
+    const features = (geojson && geojson.features) || [];
     const points = [];
     let floodTicketCount = 0;
 
@@ -615,6 +621,10 @@
           // Derived, sourced water-level status — see CONTEXT.md "Water-level status".
           // Never a guessed value: null whenever no threshold is known.
           waterLevelStatus: waterLevelStatus(levelM, thresholds),
+          // Sourced from the same threshold table — null (not guessed) when
+          // the station has none. The feed carries no bank figure, so this
+          // is the only "how close to trouble" number we can honestly show.
+          marginToCriticalM: canalMarginToCriticalM(levelM, thresholds),
         });
       }
     }
@@ -720,6 +730,37 @@
     return "red";
   }
 
+  // Metres of headroom below BMA's critical level (negative once over it).
+  // Rounded to cm to hide floating-point noise (2.2 - 1.5 = 0.7000000000000002).
+  function canalMarginToCriticalM(levelM, thresholds) {
+    if (!thresholds) return null;
+    return Math.round((thresholds.criticalM - levelM) * 100) / 100;
+  }
+
+  // Trend versus the previous reading. Null when there is none (first load).
+  // Readings are compared at cm precision — the feed's own resolution.
+  function canalTrend(prevLevelM, levelM) {
+    if (prevLevelM == null || levelM == null) return null;
+    const diffCm = Math.round((levelM - prevLevelM) * 100);
+    return diffCm > 0 ? "rising" : diffCm < 0 ? "falling" : "steady";
+  }
+
+  // ThaiWater's feed has no previous-reading field, so the app remembers it.
+  // `history` maps station key -> { levelM, updated, prevLevelM }. A poll that
+  // returns the same `updated` stamp is the same reading, not a new one, so
+  // it must not overwrite the comparison. Returns new stations + new history.
+  function withCanalTrend(stations, history) {
+    const nextHistory = new Map();
+    const out = stations.map((s) => {
+      const h = history.get(s.key);
+      let prevLevelM = null;
+      if (h) prevLevelM = h.updated === s.updated ? h.prevLevelM : h.levelM;
+      nextHistory.set(s.key, { levelM: s.levelM, updated: s.updated, prevLevelM });
+      return { ...s, prevLevelM, trend: canalTrend(prevLevelM, s.levelM) };
+    });
+    return { stations: out, history: nextHistory };
+  }
+
   globalTarget.FloodData = {
     REFRESH_MS,
     BMA_STALE_MS,
@@ -739,9 +780,14 @@
     loadBMA,
     loadLongdo,
     loadTraffy,
+    parseTraffy,
+    parseLongdo,
     parseCanalStations,
     loadThaiWaterCanal,
     nearestStations,
     waterLevelStatus,
+    canalTrend,
+    canalMarginToCriticalM,
+    withCanalTrend,
   };
 })();

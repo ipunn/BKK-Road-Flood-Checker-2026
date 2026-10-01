@@ -53,3 +53,12 @@ test("fmtDuration renders sub-minute ages as 'now', not '0 min'", () => {
   assert.equal(I18n.fmtDuration(0.2), "Just now");
   I18n.setLang("th");
 });
+
+test("Thai and English dictionaries expose the same keys", () => {
+  const th = new Set(Object.keys(I18n.DICT.th));
+  const en = new Set(Object.keys(I18n.DICT.en));
+  const missingFromEn = [...th].filter((k) => !en.has(k));
+  const missingFromTh = [...en].filter((k) => !th.has(k));
+  assert.deepEqual(missingFromEn, [], `keys missing from en: ${missingFromEn.join(", ")}`);
+  assert.deepEqual(missingFromTh, [], `keys missing from th: ${missingFromTh.join(", ")}`);
+});

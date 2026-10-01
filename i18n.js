@@ -55,6 +55,12 @@
 
       "flyto.title": "คลิกเพื่อไปยังตำแหน่งบนแผนที่",
       "canal.popup.note": "ข้อมูลบริบท ไม่ใช่รายงานสภาพถนน",
+      "canal.trend.rising": "▲ ระดับน้ำเพิ่มขึ้น",
+      "canal.trend.falling": "▼ ระดับน้ำลดลง",
+      "canal.trend.steady": "● ระดับน้ำคงที่",
+      "canal.trend.prev": "(ครั้งก่อน {n} ม.)",
+      "canal.margin.under": "ต่ำกว่าระดับวิกฤติ {n} ม.",
+      "canal.margin.over": "เกินระดับวิกฤติ {n} ม.",
       "camera.popup.note": "ลิงก์เปิดหน้า BMA Traffic ทั่วไป — ไม่ใช่กล้องนี้โดยตรง",
       "camera.popup.link": "ดูกล้อง BMA ↗",
       "photo.cue.title": "มีภาพประกอบ — ดูภาพเพื่อประเมินด้วยตนเอง",
@@ -201,6 +207,12 @@
 
       "flyto.title": "Click to fly to this spot on the map",
       "canal.popup.note": "Contextual data, not a road report",
+      "canal.trend.rising": "▲ Rising",
+      "canal.trend.falling": "▼ Falling",
+      "canal.trend.steady": "● Steady",
+      "canal.trend.prev": "(previous {n} m)",
+      "canal.margin.under": "{n} m below critical level",
+      "canal.margin.over": "{n} m over critical level",
       "camera.popup.note": "Link opens BMA's general Traffic viewer — not this specific camera",
       "camera.popup.link": "View on BMA ↗",
       "photo.cue.title": "Has a photo — view it to judge for yourself",
@@ -423,5 +435,5 @@
     document.addEventListener("DOMContentLoaded", init);
   }
 
-  globalTarget.I18n = { t, getLang, setLang, toggleLang, applyTranslations, timeAgo, fmtDuration, fmtDepth, fmtMeters, fmtTime };
+  globalTarget.I18n = { t, getLang, setLang, toggleLang, applyTranslations, timeAgo, fmtDuration, fmtDepth, fmtMeters, fmtTime, DICT };
 })();

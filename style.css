@@ -759,3 +759,6 @@ h1, h2 { margin: 0; }
      its own full-width row here. */
   #status-line { white-space: normal; order: 2; width: 100%; }
 }
+
+.canal-detail { font-size: 0.78rem; color: var(--ink-dim); }
+.station-item .trend { font-family: var(--font-data); font-size: 0.7rem; color: var(--ink-dim); }
