@@ -946,8 +946,8 @@
   // this tile holds polygons.
   const GISTDA_PROBE_URL = GISTDA_WARN_TILE_URL.replace("{z}/{x}/{y}", "6/49/29");
   function gistdaWarnStyle(classRisk) {
-    if (classRisk === 1) return { label: "watch", fillColor: "#f9a825", color: "#f9a825", fillOpacity: 0.35, weight: 0.5, fill: true };
-    if (classRisk === 2) return { label: "warning", fillColor: "#b71c1c", color: "#b71c1c", fillOpacity: 0.4, weight: 0.5, fill: true };
+    if (classRisk === 1) return { label: "watch", fillColor: "#f9a825", color: "#f9a825", fillOpacity: 0.38, stroke: false, fill: true };
+    if (classRisk === 2) return { label: "warning", fillColor: "#d50000", color: "#d50000", fillOpacity: 0.38, stroke: false, fill: true };
     return null;
   }
   // A 404 means "no polygons in this tile" (GISTDA's own client treats it so);
