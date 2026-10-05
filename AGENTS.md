@@ -2,7 +2,7 @@
 
 ### Issue tracker
 
-Issues and specs live as local markdown files under `.scratch/<feature>/` (no GitHub/GitLab remote configured for this repo). See `docs/agents/issue-tracker.md`.
+Issues and specs live as local markdown files under `.scratch/<feature>/` (the repo is on GitHub, but its Issues aren't used). See `docs/agents/issue-tracker.md`.
 
 ### Domain docs
 
