@@ -605,7 +605,11 @@ function animateNewPins(fresh) {
   if (reducedMotion.matches || fresh.length === 0) return;
   fresh.sort((a, b) => FD.STATUS_RANK[b.p.status] - FD.STATUS_RANK[a.p.status]);
   fresh.forEach(({ marker, p, age }, i) => {
-    const el = marker.getElement && marker.getElement();
+    let el = marker.getElement && marker.getElement();
+    // A divIcon marker (camera pin) is positioned by Leaflet's inline transform
+    // on its outer element; animating that would overwrite it and fling the pin
+    // to the map corner. Animate the inner glyph instead.
+    if (el && el.classList.contains("photo-pin")) el = el.firstElementChild;
     if (el) {
       el.style.setProperty("--d", age ? -age + "ms" : Math.min(i * 14, 420) + "ms");
       el.classList.add("pin-in");

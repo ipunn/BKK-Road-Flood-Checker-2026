@@ -978,6 +978,9 @@ html.paused *, html.paused *::before, html.paused *::after { animation-play-stat
   .pin-in { transform-box: fill-box; transform-origin: center; animation: pin-in 520ms ease-out var(--d, 0ms) both; }
   @keyframes pin-in { from { transform: scale(0.7); opacity: 0; } to { transform: none; opacity: 1; } }
 
+  .photo-pin-glyph.pin-in { animation-name: photo-pin-in; }
+  @keyframes photo-pin-in { from { transform: scale(0.7); opacity: 0; } to { transform: none; opacity: 0.85; } }
+
   .pin-ripple { background: none; border: 0; pointer-events: none; }
   .pin-ripple i {
     position: absolute;
